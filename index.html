@@ -781,20 +781,56 @@ function pintarLive(){
 }
 setInterval(()=>{pintarLive();if(TAB==='vivo'||TAB==='equipo')actualizarHaces();},10000);
 
+/* ---------- copia local: el tablero abre al instante ----------
+   Lo ultimo que se vio queda guardado en el telefono. Al abrir se pinta eso
+   de inmediato y se actualiza en segundo plano; si el servidor esta lento,
+   ya no se mira una pantalla en blanco. */
+const CACHE_SV='gs-sv-cache';
+function leerCache(){const c=LS.get(CACHE_SV,null);return (c&&SES&&c.u===SES.cedula)?c:null;}
+function guardarCache(parte){
+  if(!SES)return;
+  const c=leerCache()||{u:SES.cedula};
+  Object.assign(c,parte);
+  try{localStorage.setItem(CACHE_SV,JSON.stringify(c));}
+  catch(e){try{localStorage.setItem(CACHE_SV,JSON.stringify({u:c.u,estado:c.estado}));}catch(_){}}
+}
+function prepararEstado(){
+  if(!F.ciudad||S.ciudades.indexOf(F.ciudad)<0)F.ciudad=S.ciudad;
+  if(F.rango==='ciclo'&&!S.cfg.ciclo)F.rango='hoy';
+  $('#filters').style.display='';$('#tabs').style.display='';
+  pintarFiltros();pintarTabs();
+}
 async function iniciar(){
   if(!SES){pantallaError('sesion_expirada');return;}
   if(!API()){pantallaError('sin_api');return;}
+  let pintado=false;
+  const C=leerCache();
+  if(C&&C.estado){
+    try{
+      S=C.estado;prepararEstado();
+      const [d,h]=calcRango(),clave=F.ciudad+'|'+d+'|'+h;
+      if(C.datos&&C.datos.clave===clave&&C.datos.r&&C.datos.r.geo){
+        aplicarDatos(C.datos.r,clave,true,true);
+        CONOCIDOS=null;          // lo guardado no dispara avisos de «nuevo»
+        SIG='';                  // la primera consulta trae todo fresco
+        pintado=true;
+        ULT_OK=C.t||0;
+        setLive('','ACTUALIZANDO',C.t?' · '+hace(C.t):'');
+      }
+    }catch(e){pintado=false;}
+  }
   try{
     const r=await api({action:'sv_estado'},40000);
-    if(!r||!r.ok){pantallaError(r&&r.error);return;}
+    if(!r||!r.ok){if(!pintado||(r&&['sesion_expirada','otro_dispositivo','sin_permiso','inactivo','no_instalado'].indexOf(r.error)>=0))pantallaError(r&&r.error);return;}
     S=r;OFF=r.ahora-Date.now();
-    if(!F.ciudad||S.ciudades.indexOf(F.ciudad)<0)F.ciudad=S.ciudad;
-    if(F.rango==='ciclo'&&!S.cfg.ciclo)F.rango='hoy';
-    $('#filters').style.display='';$('#tabs').style.display='';
-    pintarFiltros();pintarTabs();
-    $('#main').innerHTML='<div class="sk" style="height:120px;max-width:520px"></div><div class="grid g4 mt">'+'<div class="sk"></div>'.repeat(4)+'</div><div class="sk mt" style="height:340px"></div>';
+    guardarCache({estado:r});
+    prepararEstado();
+    if(!pintado)$('#main').innerHTML='<div class="sk" style="height:120px;max-width:520px"></div><div class="grid g4 mt">'+'<div class="sk"></div>'.repeat(4)+'</div><div class="sk mt" style="height:340px"></div>';
     await cargar(true);
-  }catch(e){pantallaError(e.message==='sin_api'?'sin_api':'red');}
+  }catch(e){
+    if(!pintado)pantallaError(e.message==='sin_api'?'sin_api':'red');
+    else{FALLOS++;pintarLive();}
+  }
 }
 
 async function cargar(conGeo){
@@ -812,6 +848,13 @@ async function cargar(conGeo){
     }
     FALLOS=0;ULT_OK=Date.now()+OFF;OFF=r.ahora-Date.now();
     if(r.same){pintarLive();return;}
+    aplicarDatos(r,clave,pedirGeo,cambioClave);
+    guardarCache({datos:{clave,r:D},t:Date.now()});
+  }catch(e){FALLOS++;pintarLive();}
+  finally{CARGANDO=false;}
+}
+function aplicarDatos(r,clave,pedirGeo,cambioClave){
+    const [desde,hasta]=calcRango();
     SIG=r.sig;
     if(pedirGeo&&r.geo){D=r;GEO=new Map(r.geo.map(g=>[g[0],{num:g[0],lat:g[1],lng:g[2],ruta:g[3]}]));}
     else{D.regs=r.regs;D.piezas=r.piezas;D.ultimo=r.ultimo;D.sig=r.sig;D.desde=r.desde;D.hasta=r.hasta;}
@@ -831,8 +874,6 @@ async function cargar(conGeo){
     pintarSelects();calcular();pintarTabs();render(null,true,primera);pintarLive();
     if(nuevos.length)avisar(nuevos);
     $('#sub').textContent=`${S.usuario.nombre||'Supervisor'} · ${F.ciudad} · ${desde===hasta?larga(desde):corta(desde)+' → '+corta(hasta)}`;
-  }catch(e){FALLOS++;pintarLive();}
-  finally{CARGANDO=false;}
 }
 function recargar(geo){SIG='';CONOCIDOS=null;NUEVOS.clear();cargar(!!geo);}
 function programarPulso(){
