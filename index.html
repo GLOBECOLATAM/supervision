@@ -381,6 +381,24 @@ nav.tabs::-webkit-scrollbar{display:none}
 .mpanel select{width:100%;max-width:none;margin-top:8px}
 .mtit{margin-top:14px;font:700 10.5px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--mute)}
 .leaflet-container{font-family:var(--sans);background:var(--s1)}
+/* mapa con el estilo de GEO Track: calles en azul sobre fondo marino, nítido
+   (CARTO hasta nivel 20 y teselas de doble densidad en pantallas retina) */
+.leaflet-container.svmap{background:linear-gradient(135deg,#061727,#0A2438)}
+:root[data-theme="light"] .leaflet-container.svmap{background:linear-gradient(135deg,#E9F0F6,#F4F8FB)}
+.tl-lab{opacity:.85}
+/* modos: mantenimiento / preventivo / correctivo */
+#modosWrap{padding-top:2px;padding-bottom:6px}
+.seg.modos button{height:34px;padding:0 16px;font-size:13px}
+.pcleg{position:absolute;left:12px;bottom:12px;z-index:500;display:flex;flex-wrap:wrap;gap:6px 12px;max-width:calc(100% - 24px);padding:9px 12px;border-radius:12px;background:color-mix(in srgb,var(--s1) 88%,transparent);border:1px solid var(--line);font-size:11.5px;color:var(--ink2);backdrop-filter:blur(10px)}
+.pcleg>span{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.pcleg .sw{width:10px;height:10px;border-radius:50%;border:2px solid;display:inline-block}
+.pcleg b{color:var(--ink);font-weight:700}
+.hb{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) auto;gap:10px;align-items:center;padding:7px 0;font-size:12.5px;border-bottom:1px solid var(--line)}
+.hb:last-child{border-bottom:0}
+.hb span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink2)}
+.hbt{height:8px;border-radius:99px;background:var(--s2);overflow:hidden}
+.hbt i{display:block;height:100%;border-radius:99px}
+.hb b{font:700 13px var(--sans);min-width:26px;text-align:right}
 .leaflet-popup-content-wrapper,.leaflet-popup-tip{background:var(--s1);color:var(--ink);box-shadow:0 20px 40px -12px rgba(0,0,0,.45);border:1px solid var(--line)}
 .leaflet-popup-content-wrapper{border-radius:16px}
 .leaflet-popup-content{margin:14px 16px;font-size:12.5px;line-height:1.45;min-width:220px}
@@ -545,6 +563,7 @@ body.tv .mapwrap{height:calc(100vh - 150px)}
     <button class="ib" id="tvBtn" title="Modo pantalla" aria-label="Modo pantalla"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg></button>
     <button class="ib" id="tema" title="Tema claro / oscuro" aria-label="Tema claro / oscuro"></button>
   </div>
+  <div class="wrap sub" id="modosWrap" style="display:none"><div class="seg modos" id="modos" role="tablist" aria-label="Qué supervisar"></div></div>
   <div class="wrap sub"><nav class="tabs" id="tabs" aria-label="Vistas"></nav></div>
   <div class="wrap filters" id="filters">
     <select class="pill" id="fCiudad" title="Ciudad" aria-label="Ciudad"></select>
@@ -683,7 +702,7 @@ let REGF='todos',BUSCA='',ORD={k:'u',d:-1};
 let TV=false,TVT=null,NO_VISTOS=0;
 
 const MSG={
-  sin_permiso:['No tienes habilitada la supervisión','Pide que agreguen «supervision_mantenimiento» a tus permisos en la Base de identificaciones.'],
+  sin_permiso:['No tienes habilitada la supervisión','Pide que agreguen «supervision_mantenimiento», «supervision_preventivo» o «supervision_correctivo» a tus permisos en la Base de identificaciones.'],
   sesion_expirada:['Tu sesión caducó','Vuelve al portal y entra con tu PIN.'],
   otro_dispositivo:['Tu sesión se abrió en otro equipo','Vuelve al portal y entra con tu PIN.'],
   inactivo:['Tu usuario está inactivo','Contacta a tu supervisor.'],
@@ -768,7 +787,7 @@ $('#fRango').onclick=e=>{const b=e.target.closest('button');if(!b)return;F.rango
 $('#fDesde').onchange=$('#fHasta').onchange=()=>{F.desde=$('#fDesde').value;F.hasta=$('#fHasta').value;guardarF();recargar();};
 $('#fCiudad').onchange=()=>{F.ciudad=$('#fCiudad').value;F.persona='';F.ruta='';guardarF();recargar(true);};
 $('#fPersona').onchange=()=>{F.persona=$('#fPersona').value;guardarF();calcular();render(null,false);};
-$('#fRuta').onchange=()=>{F.ruta=$('#fRuta').value;guardarF();calcular();render(null,false);};
+$('#fRuta').onchange=()=>{F.ruta=$('#fRuta').value;guardarF();if(MODO_SV!=='mant'){renderPC(false);return;}calcular();render(null,false);};
 
 /* =====================================================================
    CARGA Y PULSO EN VIVO
@@ -779,7 +798,289 @@ function pintarLive(){
   if(FALLOS>=2){setLive('err','RECONECTANDO',ULT_OK?' · '+hace(ULT_OK):'');return;}
   setLive(enVivo?'':'off',enVivo?'EN VIVO':'HISTÓRICO',ULT_OK?' · '+hace(ULT_OK):'');
 }
-setInterval(()=>{pintarLive();if(TAB==='vivo'||TAB==='equipo')actualizarHaces();},10000);
+setInterval(()=>{pintarLive();if(MODO_SV==='mant'&&(TAB==='vivo'||TAB==='equipo'))actualizarHaces();},10000);
+
+
+/* =====================================================================
+   PREVENTIVO Y CORRECTIVO
+   Cada modo se habilita con su permiso en «Permisos acceso»:
+   supervision (todo) · supervision_mantenimiento · supervision_preventivo ·
+   supervision_correctivo. Comparte filtros de ciudad y fechas, el mapa y
+   los estilos; cada uno trae sus propios datos.
+   ===================================================================== */
+const MODOS_SV=[['mant','Mantenimiento'],['prev','Preventivo'],['corr','Correctivo']];
+let MODO_SV=LS.get('gs-sv-modo','mant'),PC=null,PCK='',PCSIG='',PCF='abiertos',PCQ='';
+const modosOK=()=>(S&&S.modos)?S.modos:{mant:true,prev:false,corr:false};
+function ajustarModo(){
+  const m=modosOK();
+  if(!m[MODO_SV])MODO_SV=['mant','prev','corr'].find(k=>m[k])||'mant';
+}
+function pintarModos(){
+  ajustarModo();
+  const m=modosOK(),lista=MODOS_SV.filter(([k])=>m[k]);
+  const el=$('#modos');
+  el.innerHTML=lista.map(([k,t])=>`<button class="${k===MODO_SV?'on':''}" data-m="${k}">${t}</button>`).join('');
+  $('#modosWrap').style.display=lista.length>1?'':'none';
+  const pc=MODO_SV!=='mant';
+  $('#tabs').parentElement.style.display=pc?'none':'';
+  $('#fPersona').style.display=pc?'none':'';
+  document.querySelector('header h1').textContent=pc?(MODO_SV==='prev'?'Preventivo':'Correctivo'):'Supervisión';
+}
+$('#modos').onclick=e=>{
+  const b=e.target.closest('button');if(!b||b.dataset.m===MODO_SV)return;
+  MODO_SV=b.dataset.m;LS.set('gs-sv-modo',MODO_SV);
+  PC=null;PCK='';PCSIG='';F.ruta='';guardarF();
+  pintarModos();destruirMapa();
+  $('#main').innerHTML='<div class="sk" style="height:120px;max-width:520px"></div><div class="grid g4 mt">'+'<div class="sk"></div>'.repeat(4)+'</div><div class="sk mt" style="height:340px"></div>';
+  recargar(true);
+};
+
+async function cargarPC(conGeo){
+  if(CARGANDO)return;CARGANDO=true;
+  const [desde,hasta]=calcRango();
+  const clave=MODO_SV+'|'+F.ciudad+'|'+desde+'|'+hasta;
+  const pedirGeo=!!(conGeo||!PC||!PC.geo||PC.ciudad!==F.ciudad);
+  try{
+    const r=await api({action:MODO_SV==='prev'?'sv_prev':'sv_corr',ciudad:F.ciudad,desde,hasta,geo:pedirGeo?1:0},40000);
+    if(!r||!r.ok){
+      if(r&&['sesion_expirada','otro_dispositivo','sin_permiso','inactivo','no_instalado'].indexOf(r.error)>=0){pantallaError(r.error);return;}
+      if(r&&r.error==='accion_desconocida'){toast('Falta publicar la versión nueva del servidor');}
+      FALLOS++;pintarLive();return;
+    }
+    FALLOS=0;ULT_OK=Date.now()+OFF;OFF=r.ahora-Date.now();
+    if(!pedirGeo&&PC&&PC.geo)r.geo=PC.geo;
+    r.modo=MODO_SV;
+    const sig=JSON.stringify(r.regs||r.items);
+    const primera=PCK!==clave;
+    if(!primera&&sig===PCSIG){pintarLive();return;}    // nada cambió: no se repinta (el mapa no salta)
+    PC=r;PCK=clave;PCSIG=sig;
+    GEO=new Map((r.geo||[]).map(g=>[g[0],{num:g[0],lat:g[1],lng:g[2],ruta:g[3]}]));
+    renderPC(primera);pintarLive();
+    $('#sub').textContent=`${S.usuario.nombre||'Supervisor'} · ${F.ciudad} · ${desde===hasta?larga(desde):corta(desde)+' → '+corta(hasta)}`;
+  }catch(e){FALLOS++;pintarLive();}
+  finally{CARGANDO=false;}
+}
+
+const pcPrev=()=>(PC.regs||[]).map(a=>({id:a[0],fecha:a[1],hora:a[2],r1:a[3],r2:a[4],tacho:a[5],ruta:a[6],lat:a[7],lng:a[8],acc:a[9],sin:a[10],tc:a[11],ta:a[12],obs:a[13],it:a[14]||[],foto:a[15],av:a[16],
+  personas:[a[3],a[4]].map(x=>String(x||'').trim()).filter(Boolean)}));
+const pcCorr=()=>(PC.items||[]).map(a=>({id:a[0],prev:a[1],fp:a[2],tacho:a[3],ruta:a[4],grupo:a[5],item:a[6],acc:a[7],cant:a[8],rp:a[9],est:a[10],fc:a[11],hc:a[12],rc:a[13],obs:a[14],lat:a[15],lng:a[16],foto:a[17],nf:a[18],
+  k:/^corregido$/i.test(a[10])?'hecho':/no se pudo/i.test(a[10])?'nopudo':'pend'}));
+function pintarRutasPC(lista){
+  const ru=new Set(lista.map(x=>x.ruta).filter(Boolean));GEO.forEach(g=>{if(g.ruta)ru.add(g.ruta);});if(F.ruta)ru.add(F.ruta);
+  $('#fRuta').innerHTML='<option value="">Todas las rutas</option>'+[...ru].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true})).map(p=>`<option ${p===F.ruta?'selected':''}>${esc(p)}</option>`).join('');
+}
+function pcBars(pares,col){
+  const max=Math.max(1,...pares.map(p=>p[1]));
+  return pares.length?pares.map(([t,n,c])=>`<div class="hb"><span>${esc(t)}</span><div class="hbt"><i style="width:${Math.max(3,Math.round(n/max*100))}%;background:${c||col}"></i></div><b>${fmt(n)}</b></div>`).join(''):'<div class="empty" style="padding:22px">Sin hallazgos en el periodo.</div>';
+}
+const dDias=(a,b)=>Math.round((Date.parse(b)-Date.parse(a))/864e5);
+function renderPC(primera){
+  if(!PC)return;
+  pintarModos();
+  const v=PC.modo==='prev'?vPrev:vCorr;
+  destruirMapa();
+  v();
+  document.querySelectorAll('#main .rv').forEach((e,i)=>e.style.setProperty('--i',Math.min(i,10)));
+  main.classList.toggle('anim',!!primera&&!REDUCE);
+}
+function mapaPC(puntos,nombres){
+  if(typeof L==='undefined'||!$('#map'))return;
+  crearMapa();
+  const rend=MAP._rend,ring=temaActual()==='light'?'#FFFFFF':'#0A1724',b=[];
+  puntos.forEach(p=>{
+    if(p.lat==null)return;
+    const hueco=p.hueco;
+    const m=L.circleMarker([p.lat,p.lng],{renderer:rend,radius:hueco?4.2:6.8,color:hueco?p.c:ring,weight:hueco?1.5:2,fillColor:p.c,fillOpacity:hueco?.12:1});
+    m.bindPopup(()=>p.pop(),{maxWidth:290});
+    if(p.onClick)m.on('dblclick',p.onClick);
+    CAPAS.pts.addLayer(m);if(!hueco||!b.length)b.push([p.lat,p.lng]);
+  });
+  const conDatos=puntos.filter(p=>!p.hueco&&p.lat!=null).map(p=>[p.lat,p.lng]);
+  const fit=conDatos.length?conDatos:puntos.filter(p=>p.lat!=null).map(p=>[p.lat,p.lng]);
+  if(fit.length)MAP.fitBounds(L.latLngBounds(fit).pad(.12),{maxZoom:17});else MAP.setView([-1.2491,-78.6168],13);
+  $('#pcLeg').innerHTML=nombres.map(([t,c,n,h])=>`<span><span class="sw" style="background:${h?'transparent':c};border-color:${c}"></span>${esc(t)} <b>${fmt(n)}</b></span>`).join('');
+}
+
+/* ─────────── Preventivo ─────────── */
+function vPrev(){
+  const todos=pcPrev();pintarRutasPC(todos);
+  const regs=todos.filter(r=>!F.ruta||r.ruta===F.ruta);
+  const tachos=new Set(regs.map(r=>r.tacho));
+  const geoN=[...GEO.values()].filter(g=>!F.ruta||g.ruta===F.ruta).length;
+  const hall=regs.filter(r=>r.tc||r.ta||r.sin);
+  const sin=regs.filter(r=>r.sin);
+  let itT=0,itH=0,itN=0;regs.forEach(r=>{if(r.av){itT+=r.av[0];itH+=r.av[1];itN+=r.av[2];}});
+  const cnt={};regs.forEach(r=>r.it.forEach(([n,s])=>{const k=n;(cnt[k]=cnt[k]||{a:0,c:0});/^aj/i.test(s)?cnt[k].a++:cnt[k].c++;}));
+  const top=Object.entries(cnt).map(([n,v])=>[n,v.a+v.c,v.c>=v.a?'var(--c1)':'var(--aj)']).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  main.innerHTML=`
+  ${cab('P','Preven<em>tivo</em>','Revisión preventiva por contenedor. Lo que queda en Ajuste o Cambio pasa al correctivo.')}
+  <div class="grid g4">
+    ${stat('Preventivos',fmt(regs.length),plural(tachos.size,'contenedor','contenedores')+(geoN?` · ${Math.round(tachos.size/geoN*100)}% de ${fmt(geoN)}`:''))}
+    ${stat('Con hallazgos',fmt(hall.length),regs.length?Math.round(hall.length/regs.length*100)+'% de los revisados':'—')}
+    ${stat('Siniestrados',fmt(sin.length),sin.length?[...new Set(sin.map(r=>r.sin))].join(' · '):'Ninguno')}
+    ${stat('Correctivo',itT?Math.round(itH/itT*100)+'<small>%</small>':'—',itT?`${fmt(itH)} de ${fmt(itT)} ítems corregidos${itN?' · '+itN+' no se pudo':''}`:'Sin ítems generados')}
+  </div>
+  <div class="grid split mt">
+    <div class="card rv" style="padding:0;overflow:hidden"><div class="mapwrap" style="height:min(62vh,540px);min-height:360px;border:0;border-radius:0"><div id="map"></div><div class="pcleg" id="pcLeg"></div></div></div>
+    <div class="card rv"><div class="eyebrow" style="margin-bottom:14px"><span class="idx">Top</span><span class="rule"></span>Puntos con más hallazgos</div>${pcBars(top,'var(--c1)')}</div>
+  </div>
+  <div class="tools rv mt">
+    <label class="search"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--mute)" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="q" placeholder="Contenedor, colaborador, ruta o punto" value="${esc(PCQ)}"></label>
+    <div class="seg" id="pf">${[['todos','Todos'],['hall','Con hallazgos'],['sin','Siniestrados'],['pend','Correctivo pendiente']].map(([k,t])=>`<button class="${(PCF==='abiertos'?'todos':PCF)===k?'on':''}" data-f="${k}">${t}</button>`).join('')}</div>
+  </div>
+  <div class="card rv" style="padding-top:6px;padding-bottom:6px"><div class="rows" id="rb"></div><div id="rmas"></div></div>`;
+  // mapa: revisados por resultado + pendientes del periodo (huecos)
+  const ult={};regs.forEach(r=>ult[r.tacho]=r);
+  const colR=r=>r.sin?'#E5484D':r.tc?'#378ADD':r.ta?'#C98500':'#1D9E75';
+  const pts=[];
+  GEO.forEach(g=>{if(F.ruta&&g.ruta!==F.ruta)return;const r=ult[g.num];
+    pts.push({lat:r&&r.lat!=null?r.lat:g.lat,lng:r&&r.lng!=null?r.lng:g.lng,c:r?colR(r):(css('--pend')||'#4A6076'),hueco:!r,
+      pop:()=>r?popPrev(r):`<h4>${esc(g.num)}</h4>${rutaTag(g.ruta)}<div style="margin-top:6px;color:var(--ink2)">Sin preventivo en este periodo.</div>`});});
+  regs.forEach(r=>{if(!GEO.has(r.tacho)&&r.lat!=null)pts.push({lat:r.lat,lng:r.lng,c:colR(r),pop:()=>popPrev(r)});});
+  const n=k=>regs.filter(k).length;
+  mapaPC(pts,[['Todo OK','#1D9E75',n(r=>!r.sin&&!r.tc&&!r.ta)],['Ajustes','#C98500',n(r=>!r.sin&&!r.tc&&r.ta)],['Cambios','#378ADD',n(r=>!r.sin&&r.tc)],['Siniestrado','#E5484D',n(r=>r.sin)],['Sin revisar',css('--pend')||'#4A6076',[...GEO.values()].filter(g=>(!F.ruta||g.ruta===F.ruta)&&!ult[g.num]).length,1]]);
+  let lim=120;
+  const lista=()=>{const q=PCQ.toLowerCase().trim(),f=PCF==='abiertos'?'todos':PCF;
+    return regs.filter(r=>{
+      if(f==='hall'&&!(r.tc||r.ta||r.sin))return false;
+      if(f==='sin'&&!r.sin)return false;
+      if(f==='pend'&&!(r.av&&r.av[1]<r.av[0]))return false;
+      if(q&&(r.tacho+' '+r.ruta+' '+r.personas.join(' ')+' '+r.it.map(x=>x[0]).join(' ')+' '+r.obs).toLowerCase().indexOf(q)<0)return false;
+      return true;}).sort((a,b)=>(b.fecha+b.hora).localeCompare(a.fecha+a.hora));};
+  const pintar=()=>{
+    const l=lista();
+    $('#rb').innerHTML=`<div class="row h"><div>Fecha</div><div>Contenedor</div><div>Ruta</div><div>Equipo</div><div>Resultado</div><div>Correctivo</div></div>`+
+      (l.slice(0,lim).map(r=>`<div class="row" data-id="${esc(r.id)}"><div class="fch">${esc(larga(r.fecha))}<small>${esc(r.hora)}</small></div><div class="ctn">${esc(r.tacho)}</div>${rutaTag(r.ruta)}<div class="who">${avatar(r.personas)}<span>${esc(r.personas.join(' y '))}</span></div><div class="tgs">${tagsPrev(r)}</div><div class="rv2">${avTag(r.av)}</div></div>`).join('')||'<div class="empty">Nada coincide con el filtro.</div>');
+    $('#rmas').innerHTML=l.length>lim?`<div style="text-align:center;margin:14px 0 8px"><button class="btn" id="mas">Ver más · ${fmt(l.length)} en total</button></div>`:`<div class="empty" style="padding:14px">${plural(l.length,'preventivo')}</div>`;
+    const m=$('#mas');if(m)m.onclick=()=>{lim+=120;pintar();};
+  };
+  $('#q').oninput=e=>{PCQ=e.target.value;lim=120;pintar();};
+  $('#pf').onclick=e=>{const b=e.target.closest('button');if(!b)return;PCF=b.dataset.f;$('#pf').querySelectorAll('button').forEach(c=>c.classList.toggle('on',c===b));lim=120;pintar();};
+  $('#rb').onclick=e=>{const tr=e.target.closest('.row[data-id]');if(tr)detallePrev(tr.dataset.id);};
+  pintar();
+}
+function tagsPrev(r){
+  const t=[];
+  if(r.sin)t.push(`<span class="tag x"><i></i>${esc(r.sin)}</span>`);
+  if(r.tc)t.push(`<span class="tag c"><i></i>${plural(r.tc,'cambio')}</span>`);
+  if(r.ta)t.push(`<span class="tag a"><i></i>${plural(r.ta,'ajuste')}</span>`);
+  return t.join('')||'<span class="tag ok"><i></i>Todo OK</span>';
+}
+function avTag(av){
+  if(!av)return '<span class="tag"><i></i>Sin ítems</span>';
+  const [t,h,n]=av;
+  if(h>=t)return `<span class="tag ok"><i></i>✓ ${h}/${t} corregido</span>`;
+  return `<span class="tag ${n?'x':'w'}"><i></i>${h}/${t}${n?' · '+n+' no se pudo':''}</span>`;
+}
+function popPrev(r){return `<h4>${esc(r.tacho)}</h4><div style="margin-bottom:8px;display:flex;gap:6px;flex-wrap:wrap">${rutaTag(r.ruta)}${tagsPrev(r)}</div><div style="color:var(--ink2)">${esc(larga(r.fecha))} · ${esc(r.hora)} · ${esc(r.personas.join(' y '))}</div><div class="acts" style="margin-top:10px"><button class="btn" onclick="detallePrev('${jsq(r.id)}')">Ver detalle</button></div>`;}
+function detallePrev(id){
+  const r=pcPrev().find(x=>x.id===id);if(!r)return;
+  const g=GEO.get(r.tacho),maps=r.lat!=null?`https://www.google.com/maps?q=${r.lat},${r.lng}`:g&&g.lat!=null?`https://www.google.com/maps?q=${g.lat},${g.lng}`:'';
+  $('#sheet').innerHTML=`
+    <div class="sh"><div class="sp"><div class="eyebrow" style="margin-bottom:8px"><span class="idx">Preventivo</span><span class="rule"></span>${esc(larga(r.fecha))} · ${esc(r.hora)}</div><h2>${esc(r.tacho)}</h2><div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">${rutaTag(r.ruta)}${tagsPrev(r)}${avTag(r.av)}</div></div><button class="ib" onclick="cerrarModal()" aria-label="Cerrar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+    <div class="kv">
+      <div><span>Equipo</span><b>${esc(r.personas.join(' y ')||'—')}</b></div>
+      <div><span>GPS</span><b>${r.lat!=null?(r.acc!=null?'± '+r.acc+' m':'Sí'):'Sin ubicación'}</b></div>
+      <div><span>Correctivo</span><b>${r.av?`${r.av[1]} de ${r.av[0]} corregidos`:'Sin ítems'}</b></div>
+    </div>
+    <div class="pz">${r.it.length?'<div class="g">Hallazgos</div>'+r.it.map(([n,s])=>`<div class="p"><span>${esc(n)}</span>${/^aj/i.test(s)?'<span class="tag a"><i></i>Ajuste</span>':`<span class="tag c"><i></i>${esc(s)}</span>`}</div>`).join(''):'<div class="g">Puntos</div><div class="p"><span>Todos los puntos revisados</span><span class="tag ok"><i></i>OK</span></div>'}
+      ${r.sin?`<div class="p"><span>Siniestrado</span><span class="tag x"><i></i>${esc(r.sin)}</span></div>`:''}</div>
+    ${r.obs?`<div class="rev" style="background:var(--s2)"><div class="eyebrow" style="margin-bottom:6px">Observaciones</div><div style="font-size:14px;line-height:1.55">${esc(r.obs)}</div></div>`:''}
+    ${r.foto?`<div class="foto"><a href="https://drive.google.com/file/d/${esc(r.foto)}/view" target="_blank" rel="noopener"><img src="https://drive.google.com/thumbnail?id=${esc(r.foto)}&sz=w900" alt="Foto del contenedor ${esc(r.tacho)}" loading="lazy" onerror="this.outerHTML='<div class=\\'empty\\'>📷 Abrir foto en Drive</div>'"></a></div>`:''}
+    <div class="acts" style="margin-top:14px">${maps?`<a class="btn" href="${maps}" target="_blank" rel="noopener">Abrir en Google Maps</a>`:''}</div>`;
+  $('#modal').classList.add('show');$('#sheet').scrollTop=0;
+}
+
+/* ─────────── Correctivo ─────────── */
+function vCorr(){
+  const todos=pcCorr();pintarRutasPC(todos);
+  const its=todos.filter(x=>!F.ruta||x.ruta===F.ruta);
+  const [desde,hasta]=calcRango();
+  const pend=its.filter(x=>x.k==='pend'),nop=its.filter(x=>x.k==='nopudo');
+  const hechos=its.filter(x=>x.k==='hecho'&&x.fc>=desde&&x.fc<=hasta);
+  const total=its.length,cerr=its.filter(x=>x.k==='hecho').length;
+  const dias=hechos.filter(x=>x.fp&&x.fc).map(x=>dDias(x.fp,x.fc));
+  const prom=dias.length?dias.reduce((a,b)=>a+b,0)/dias.length:null;
+  const viejo=pend.reduce((m,x)=>Math.max(m,x.fp?diasDesde(x.fp):0),0);
+  const cnt={};pend.concat(nop).forEach(x=>{cnt[x.item]=(cnt[x.item]||0)+1;});
+  const top=Object.entries(cnt).sort((a,b)=>b[1]-a[1]).slice(0,10).map(([n,v])=>[n,v,'var(--crit)']);
+  main.innerHTML=`
+  ${cab('C','Correc<em>tivo</em>','Ítems que el preventivo dejó en Ajuste o Cambio, y quién los resolvió.')}
+  <div class="grid g4">
+    ${stat('Pendientes',fmt(pend.length),plural(new Set(pend.map(x=>x.tacho)).size,'contenedor','contenedores')+(viejo?` · el más antiguo hace ${viejo} d`:''))}
+    ${stat('Corregidos',fmt(hechos.length),'en el periodo'+(prom!=null?` · ${prom.toLocaleString('es-EC',{maximumFractionDigits:1})} días en promedio`:''))}
+    ${stat('No se pudo',fmt(nop.length),nop.length?'requieren otra visita':'Ninguno')}
+    ${stat('Avance',total?Math.round(cerr/total*100)+'<small>%</small>':'—',`${fmt(cerr)} de ${fmt(total)} ítems cerrados`)}
+  </div>
+  <div class="grid split mt">
+    <div class="card rv" style="padding:0;overflow:hidden"><div class="mapwrap" style="height:min(62vh,540px);min-height:360px;border:0;border-radius:0"><div id="map"></div><div class="pcleg" id="pcLeg"></div></div></div>
+    <div class="card rv"><div class="eyebrow" style="margin-bottom:14px"><span class="idx">Top</span><span class="rule"></span>Lo que más está pendiente</div>${pcBars(top,'var(--crit)')}</div>
+  </div>
+  <div class="tools rv mt">
+    <label class="search"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--mute)" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="q" placeholder="Contenedor, ruta, ítem o responsable" value="${esc(PCQ)}"></label>
+    <div class="seg" id="pf">${[['abiertos','Pendientes'],['hecho','Corregidos'],['nopudo','No se pudo'],['todos','Todos']].map(([k,t])=>`<button class="${PCF===k?'on':''}" data-f="${k}">${t}</button>`).join('')}</div>
+  </div>
+  <div class="card rv" style="padding-top:6px;padding-bottom:6px"><div class="rows" id="rb"></div><div id="rmas"></div></div>`;
+  // mapa: por contenedor, su peor estado
+  const por=new Map();its.forEach(x=>{if(!por.has(x.tacho))por.set(x.tacho,[]);por.get(x.tacho).push(x);});
+  const col={pend:'#E5484D',nopudo:'#E8A31C',hecho:'#1D9E75'};
+  const kDe=l=>l.some(x=>x.k==='pend')?'pend':l.some(x=>x.k==='nopudo')?'nopudo':'hecho';
+  const pts=[],cuenta={pend:0,nopudo:0,hecho:0};
+  por.forEach((l,t)=>{const g=GEO.get(t),c=l.find(x=>x.lat!=null),k=kDe(l);cuenta[k]++;
+    const lat=g&&g.lat!=null?g.lat:c&&c.lat,lng=g&&g.lng!=null?g.lng:c&&c.lng;
+    pts.push({lat:lat??null,lng:lng??null,c:col[k],pop:()=>popCorr(t,l)});});
+  mapaPC(pts,[['Con pendientes',col.pend,cuenta.pend],['No se pudo',col.nopudo,cuenta.nopudo],['Todo corregido',col.hecho,cuenta.hecho]]);
+  let lim=150;
+  const lista=()=>{const q=PCQ.toLowerCase().trim();
+    return its.filter(x=>{
+      if(PCF==='abiertos'&&x.k!=='pend')return false;
+      if(PCF==='hecho'&&x.k!=='hecho')return false;
+      if(PCF==='nopudo'&&x.k!=='nopudo')return false;
+      if(q&&(x.tacho+' '+x.ruta+' '+x.item+' '+x.grupo+' '+x.rp+' '+x.rc+' '+x.obs).toLowerCase().indexOf(q)<0)return false;
+      return true;}).sort((a,b)=>PCF==='hecho'?(b.fc+b.hc).localeCompare(a.fc+a.hc):(a.fp||'').localeCompare(b.fp||''));};
+  const pintar=()=>{
+    const l=lista();
+    $('#rb').innerHTML=`<div class="row h"><div>Preventivo</div><div>Contenedor</div><div>Ruta</div><div>Ítem</div><div>Estado</div><div>Atención</div></div>`+
+      (l.slice(0,lim).map(x=>`<div class="row" data-id="${esc(x.id)}"><div class="fch">${x.fp?esc(larga(x.fp)):'—'}<small>${esc(x.rp||'')}</small></div><div class="ctn">${esc(x.tacho)}</div>${rutaTag(x.ruta)}<div class="who"><span style="color:var(--ink)"><b>${esc(x.item)}</b> · ${esc(x.acc)}${x.cant>1?' ×'+x.cant:''}</span></div><div class="tgs">${estTag(x)}</div><div class="rv2">${atTag(x)}</div></div>`).join('')||'<div class="empty">Nada coincide con el filtro.</div>');
+    $('#rmas').innerHTML=l.length>lim?`<div style="text-align:center;margin:14px 0 8px"><button class="btn" id="mas">Ver más · ${fmt(l.length)} en total</button></div>`:`<div class="empty" style="padding:14px">${plural(l.length,'ítem')}</div>`;
+    const m=$('#mas');if(m)m.onclick=()=>{lim+=150;pintar();};
+  };
+  $('#q').oninput=e=>{PCQ=e.target.value;lim=150;pintar();};
+  $('#pf').onclick=e=>{const b=e.target.closest('button');if(!b)return;PCF=b.dataset.f;$('#pf').querySelectorAll('button').forEach(c=>c.classList.toggle('on',c===b));lim=150;pintar();};
+  $('#rb').onclick=e=>{const tr=e.target.closest('.row[data-id]');if(tr)detalleCorr(tr.dataset.id);};
+  pintar();
+}
+function estTag(x){return x.k==='hecho'?'<span class="tag ok"><i></i>✓ Corregido</span>':x.k==='nopudo'?'<span class="tag w"><i></i>No se pudo</span>':'<span class="tag x"><i></i>Pendiente</span>';}
+function atTag(x){
+  if(x.k==='hecho')return `<span class="tag"><i></i>${x.fc?esc(corta(x.fc)):''}${x.fp&&x.fc?' · '+dDias(x.fp,x.fc)+' d':''}</span>`;
+  const d=x.fp?diasDesde(x.fp):null;
+  return d==null?'':`<span class="tag ${d>7?'x':d>3?'w':''}"><i></i>hace ${d} d</span>`;
+}
+function popCorr(t,l){
+  const g=GEO.get(t);
+  return `<h4>${esc(t)}</h4><div style="margin-bottom:8px">${rutaTag((g&&g.ruta)||l[0].ruta)}</div>`+
+    l.slice(0,8).map(x=>`<div style="display:flex;justify-content:space-between;gap:8px;margin:4px 0"><span>${esc(x.item)}</span>${estTag(x)}</div>`).join('')+
+    (l.length>8?`<div style="color:var(--mute)">y ${l.length-8} más</div>`:'')+
+    `<div class="acts" style="margin-top:10px"><button class="btn" onclick="PCQ='${jsq(t)}';PCF='todos';renderPC(false)">Ver en la lista</button></div>`;
+}
+function detalleCorr(id){
+  const x=pcCorr().find(y=>y.id===id);if(!x)return;
+  const g=GEO.get(x.tacho),maps=x.lat!=null?`https://www.google.com/maps?q=${x.lat},${x.lng}`:g&&g.lat!=null?`https://www.google.com/maps?q=${g.lat},${g.lng}`:'';
+  $('#sheet').innerHTML=`
+    <div class="sh"><div class="sp"><div class="eyebrow" style="margin-bottom:8px"><span class="idx">Correctivo</span><span class="rule"></span>${esc(x.grupo||'')}</div><h2>${esc(x.tacho)}</h2><div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">${rutaTag(x.ruta)}${estTag(x)}</div></div><button class="ib" onclick="cerrarModal()" aria-label="Cerrar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+    <div class="kv">
+      <div><span>Ítem</span><b>${esc(x.item)}</b></div>
+      <div><span>Acción pedida</span><b>${esc(x.acc)}${x.cant>1?' ×'+x.cant:''}</b></div>
+      <div><span>Preventivo</span><b>${x.fp?esc(larga(x.fp)):'—'}${x.rp?' · '+esc(x.rp):''}</b></div>
+      <div><span>Corrección</span><b>${x.fc?esc(larga(x.fc))+(x.hc?' · '+esc(x.hc):''):'—'}</b></div>
+      <div><span>Responsables</span><b>${esc(x.rc||'—')}</b></div>
+      <div><span>Tiempo de atención</span><b>${x.fp&&x.fc?dDias(x.fp,x.fc)+' días':x.fp?'pendiente hace '+diasDesde(x.fp)+' días':'—'}</b></div>
+    </div>
+    ${x.obs?`<div class="rev" style="background:var(--s2)"><div class="eyebrow" style="margin-bottom:6px">Observación de la corrección</div><div style="font-size:14px;line-height:1.55">${esc(x.obs)}</div></div>`:''}
+    ${x.foto?`<div class="foto"><a href="https://drive.google.com/file/d/${esc(x.foto)}/view" target="_blank" rel="noopener"><img src="https://drive.google.com/thumbnail?id=${esc(x.foto)}&sz=w900" alt="Foto de la corrección" loading="lazy" onerror="this.outerHTML='<div class=\\'empty\\'>📷 Abrir foto en Drive</div>'"></a></div>${x.nf>1?`<div style="font-size:12.5px;color:var(--mute);margin-top:6px">${x.nf} fotos en la hoja de correctivo.</div>`:''}`:''}
+    <div class="acts" style="margin-top:14px">${maps?`<a class="btn" href="${maps}" target="_blank" rel="noopener">Abrir en Google Maps</a>`:''}</div>`;
+  $('#modal').classList.add('show');$('#sheet').scrollTop=0;
+}
 
 /* ---------- copia local: el tablero abre al instante ----------
    Lo ultimo que se vio queda guardado en el telefono. Al abrir se pinta eso
@@ -798,7 +1099,7 @@ function prepararEstado(){
   if(!F.ciudad||S.ciudades.indexOf(F.ciudad)<0)F.ciudad=S.ciudad;
   if(F.rango==='ciclo'&&!S.cfg.ciclo)F.rango='hoy';
   $('#filters').style.display='';$('#tabs').style.display='';
-  pintarFiltros();pintarTabs();
+  pintarFiltros();pintarTabs();pintarModos();
 }
 async function iniciar(){
   if(!SES){pantallaError('sesion_expirada');return;}
@@ -809,7 +1110,7 @@ async function iniciar(){
     try{
       S=C.estado;prepararEstado();
       const [d,h]=calcRango(),clave=F.ciudad+'|'+d+'|'+h;
-      if(C.datos&&C.datos.clave===clave&&C.datos.r&&C.datos.r.geo){
+      if(MODO_SV==='mant'&&C.datos&&C.datos.clave===clave&&C.datos.r&&C.datos.r.geo){
         aplicarDatos(C.datos.r,clave,true,true);
         CONOCIDOS=null;          // lo guardado no dispara avisos de «nuevo»
         SIG='';                  // la primera consulta trae todo fresco
@@ -834,6 +1135,7 @@ async function iniciar(){
 }
 
 async function cargar(conGeo){
+  if(MODO_SV!=='mant')return cargarPC(conGeo);
   if(CARGANDO)return;CARGANDO=true;
   const [desde,hasta]=calcRango();
   const clave=F.ciudad+'|'+desde+'|'+hasta;
@@ -878,7 +1180,7 @@ function aplicarDatos(r,clave,pedirGeo,cambioClave){
 function recargar(geo){SIG='';CONOCIDOS=null;NUEVOS.clear();cargar(!!geo);}
 function programarPulso(){
   clearTimeout(POLL);
-  const base=(S?S.cfg.refresco:15)*1000;
+  const base=(MODO_SV==='mant'?(S?S.cfg.refresco:15):60)*1000;   // preventivo/correctivo cambian despacio
   const t=document.hidden?Math.max(base,45000):base;
   POLL=setTimeout(async()=>{if(S&&navigator.onLine)await cargar(false);programarPulso();},t);
 }
@@ -1124,6 +1426,7 @@ addEventListener('scroll',()=>TIP.classList.remove('on'),{passive:true});
    ===================================================================== */
 const main=$('#main');
 function render(extra,desdeDatos,primera){
+  if(MODO_SV!=='mant'){if(S&&PC)renderPC(false);return;}
   if(!S||!X)return;
   if(TAB==='mapa'&&desdeDatos&&MAP){pintarMapa(false);return;}
   const anim=!desdeDatos||primera;
@@ -1454,16 +1757,73 @@ function vMapa(extra){
 }
 function crearMapa(){
   destruirMapa();
-  MAP=L.map('map',{zoomControl:false,preferCanvas:true,attributionControl:true});
+  MAP=L.map('map',{zoomControl:false,preferCanvas:true,attributionControl:true,maxZoom:19});
+  MAP.getContainer().classList.add('svmap');
+  MAP.createPane('etiquetas');MAP.getPane('etiquetas').style.zIndex=450;MAP.getPane('etiquetas').style.pointerEvents='none';
   L.control.zoom({position:'topright'}).addTo(MAP);
   ponerTiles();
   CAPAS.zonas=L.layerGroup().addTo(MAP);CAPAS.pts=L.layerGroup().addTo(MAP);CAPAS.rec=L.layerGroup().addTo(MAP);CAPAS.pulso=L.layerGroup().addTo(MAP);
   MAP._rend=L.canvas({padding:.4});
 }
+/* Mapa con el mismo estilo de GEO Track: se descargan las teselas de Esri y
+   se les extrae solo la forma de las calles, que se pintan en azul sobre el
+   fondo marino. Hasta el nivel 16 sale del mapa gris oscuro; del 17 al 19,
+   del plano de calles (mucho más detalle). En pantallas densas se pide un
+   nivel más, así se ve nítido al acercar. (Sin CARTO: ahora pide clave.) */
+const ESRI={
+  base:(z,x,y)=>`https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/${z}/${y}/${x}`,
+  calles:(z,x,y)=>`https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/${z}/${y}/${x}`,
+  etqO:'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}',
+  etqC:'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}'
+};
+const MASK_CACHE=new Map();
+function mascara(img,calles){
+  const c=document.createElement('canvas');c.width=c.height=256;
+  const g=c.getContext('2d',{willReadFrequently:true});g.drawImage(img,0,0);
+  const id=g.getImageData(0,0,256,256),p=id.data,hist=new Uint32Array(256);
+  for(let i=0;i<p.length;i+=4)hist[(p[i]*.3+p[i+1]*.59+p[i+2]*.11)|0]++;
+  let bg=0,bm=0;for(let i=0;i<256;i++)if(hist[i]>bm){bm=hist[i];bg=i;}
+  for(let i=0;i<p.length;i+=4){
+    const r=p[i],gg=p[i+1],b=p[i+2],l=r*.3+gg*.59+b*.11;let a;
+    if(calles){const mx=Math.max(r,gg,b),mn=Math.min(r,gg,b);a=(l>bg+3&&mx-mn<30)?Math.min(1,(l-bg-3)/10):(r>200&&gg>140&&r-b>40)?1:0;}
+    else{const d=l-bg-3;a=d<=0?0:Math.pow(Math.min(1,d/55),.8);}
+    p[i]=p[i+1]=p[i+2]=255;p[i+3]=a*255;
+  }
+  g.putImageData(id,0,0);return c;
+}
+function teselaMask(z,x,y){
+  const k=z+'/'+x+'/'+y;let pr=MASK_CACHE.get(k);if(pr)return pr;
+  pr=new Promise(ok=>{const im=new Image();im.crossOrigin='anonymous';
+    im.onload=()=>{try{ok(mascara(im,z>16));}catch(e){ok(null);}};im.onerror=()=>ok(null);
+    im.src=(z>16?ESRI.calles:ESRI.base)(z,x,y);});
+  MASK_CACHE.set(k,pr);if(MASK_CACHE.size>500)MASK_CACHE.delete(MASK_CACHE.keys().next().value);
+  return pr;
+}
+let CallesGT=null;
+function claseCalles(){if(CallesGT)return CallesGT;CallesGT=L.GridLayer.extend({
+  createTile(c,done){
+    const extra=(devicePixelRatio>=1.4&&c.z<19)?1:0,f=1<<extra,S2=256*f;
+    const cv=document.createElement('canvas');cv.width=cv.height=S2;
+    const claro=temaActual()==='light';
+    const piezas=[];
+    for(let i=0;i<f;i++)for(let j=0;j<f;j++)piezas.push(teselaMask(c.z+extra,c.x*f+i,c.y*f+j).then(m=>[m,i,j]));
+    Promise.all(piezas).then(ls=>{
+      const g=cv.getContext('2d');
+      ls.forEach(([m,i,j])=>{if(m)g.drawImage(m,i*256,j*256);});
+      g.globalCompositeOperation='source-in';
+      g.fillStyle=claro?'rgba(74,104,140,.55)':'rgba(130,176,222,.62)';g.fillRect(0,0,S2,S2);
+      done(null,cv);
+    });
+    return cv;
+  }
+});return CallesGT;}
 function ponerTiles(){
   if(!MAP)return;if(TILE)MAP.removeLayer(TILE);
   const dark=temaActual()!=='light';
-  TILE=L.tileLayer(`https://{s}.basemaps.cartocdn.com/${dark?'dark_all':'light_all'}/{z}/{x}/{y}{r}.png`,{subdomains:'abcd',maxZoom:20,attribution:'&copy; OpenStreetMap &copy; CARTO'}).addTo(MAP);
+  TILE=L.layerGroup([
+    new (claseCalles())({maxZoom:19,attribution:'Esri, HERE, Garmin · &copy; OpenStreetMap'}),
+    L.tileLayer(dark?ESRI.etqO:ESRI.etqC,{maxZoom:16,minZoom:12,pane:'etiquetas',className:'tl-lab'})
+  ]).addTo(MAP);
 }
 function destruirMapa(){if(MAP){MAP.remove();MAP=null;CAPAS={};TILE=null;}}
 function alCambiarTema(){if(TAB==='mapa'&&MAP){ponerTiles();pintarMapa(false);}else render(null,true);}
