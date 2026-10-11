@@ -202,6 +202,8 @@ nav.tabs::-webkit-scrollbar{display:none}
 .av{display:flex;flex:none}
 .av b{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font:700 10.5px/1 var(--sans);color:#fff;border:2px solid var(--s1);letter-spacing:.02em}
 .av b+b{margin-left:-8px}
+.av b{position:relative;overflow:hidden}
+.av b img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:50%}
 .av.lg b{width:44px;height:44px;font-size:14px;border-width:3px}
 .av.lg b+b{margin-left:-12px}
 .rt{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--ink2);white-space:nowrap}
@@ -708,7 +710,25 @@ function rutaColor(r){
 const AVC=['#378ADD','#D95926','#1D9E75','#C98500','#D55181','#2E9E3A','#9085E9','#E66767'];
 const personaColor=n=>AVC[hashIdx('p'+n)%AVC.length];
 const inic=n=>String(n||'?').trim().split(/\s+/).filter(Boolean).map(w=>w[0]).slice(0,2).join('').toUpperCase()||'?';
-const avatar=(ps,lg)=>`<span class="av${lg?' lg':''}">${ps.map(p=>`<b style="background:${personaColor(p)}" title="${esc(p)}">${esc(inic(p))}</b>`).join('')}</span>`;
+/* ---------- fotos de perfil (Base de identificaciones · FOTO CREDENCIAL) ---------- */
+let FOTOS=[];const FOTO_C=new Map();
+const normN=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z\s]/g,' ').replace(/\s+/g,' ').trim();
+function ponerFotos(lista){FOTOS=(lista||[]).map(([n,a,u])=>[normN(n),normN(a),u]);FOTO_C.clear();}
+function fotoDe(p){
+  const k=normN(p);if(!k)return '';
+  if(FOTO_C.has(k))return FOTO_C.get(k);
+  let u='';
+  for(const [n,a,url] of FOTOS)if(k===n||k===a){u=url;break;}
+  if(!u){
+    const t=k.split(' ');
+    if(t.length>=2){
+      const c=FOTOS.filter(([n,a])=>t.every(w=>(' '+n+' ').indexOf(' '+w+' ')>=0||(' '+a+' ').indexOf(' '+w+' ')>=0));
+      if(c.length===1)u=c[0][2];
+    }
+  }
+  FOTO_C.set(k,u);return u;
+}
+const avatar=(ps,lg)=>`<span class="av${lg?' lg':''}">${ps.map(p=>{const f=fotoDe(p);return `<b style="background:${personaColor(p)}" title="${esc(p)}">${esc(inic(p))}${f?`<img src="${esc(f)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">`:''}</b>`;}).join('')}</span>`;
 const rutaTag=r=>`<span class="rt" style="--rc:${rutaColor(r)}">${esc(r||'Sin ruta')}</span>`;
 const tipAttr=h=>`data-tip="${esc(h)}"`;
 
@@ -1128,6 +1148,7 @@ function guardarCache(parte){
   catch(e){try{localStorage.setItem(CACHE_SV,JSON.stringify({u:c.u,estado:c.estado}));}catch(_){}}
 }
 function prepararEstado(){
+  ponerFotos(S.fotos);
   if(!F.ciudad||S.ciudades.indexOf(F.ciudad)<0)F.ciudad=S.ciudad;
   if(F.rango==='ciclo'&&!S.cfg.ciclo)F.rango='hoy';
   $('#filters').style.display='';$('#tabs').style.display='';
