@@ -790,7 +790,7 @@ const I={
   registros:'<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',
   alertas:'<path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01"/>'
 };
-const TABS=[['vivo','En vivo','Vivo'],['mapa','Mapa','Mapa'],['equipo','Equipo','Equipo'],['rutas','Rutas','Rutas'],['tiempos','Tiempos','Tiempo'],['piezas','Piezas','Piezas'],['registros','Registros','Lista'],['alertas','Alertas','Alertas']];
+const TABS=[['vivo','En vivo','Vivo'],['mapa','Mapa','Mapa'],['equipo','Equipo','Equipo'],['rutas','Rutas','Rutas'],['tiempos','Tiempos','Tiempo'],['piezas','Necesidades','Repuestos'],['registros','Registros','Lista'],['alertas','Alertas','Alertas']];
 function pintarTabs(){
   $('#tabs').innerHTML=TABS.map(([k,t,ts])=>{
     const n=k==='alertas'&&X&&X.alertasN?`<span class="n">${X.alertasN>99?'99+':X.alertasN}</span>`:'';
@@ -860,7 +860,7 @@ setInterval(()=>{pintarLive();if(MODO_SV==='mant'&&(TAB==='vivo'||TAB==='equipo'
    supervision_correctivo. Comparte filtros de ciudad y fechas, el mapa y
    los estilos; cada uno trae sus propios datos.
    ===================================================================== */
-const MODOS_SV=[['mant','Mantenimiento'],['prev','Preventivo'],['corr','Correctivo']];
+const MODOS_SV=[['mant','Levantamiento'],['prev','Preventivo'],['corr','Correctivo']];
 let MODO_SV=LS.get('gs-sv-modo','mant'),PC=null,PCK='',PCSIG='',PCF='abiertos',PCQ='';
 const modosOK=()=>(S&&S.modos)?S.modos:{mant:true,prev:false,corr:false};
 function ajustarModo(){
@@ -1237,7 +1237,7 @@ function programarPulso(){
   const t=document.hidden?Math.max(base,45000):base;
   POLL=setTimeout(async()=>{if(S&&navigator.onLine)await cargar(false);programarPulso();},t);
 }
-document.addEventListener('visibilitychange',()=>{if(!document.hidden){NO_VISTOS=0;document.title='Supervisión · Mantenimiento';if(S)cargar(false);}programarPulso();});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden){NO_VISTOS=0;document.title='Supervisión · Levantamiento';if(S)cargar(false);}programarPulso();});
 window.addEventListener('online',()=>{if(!S)iniciar();else cargar(false);});
 
 function normalizar(a){
@@ -1528,7 +1528,7 @@ function vVivo(){
         <div class="lab"><span class="k">Cobertura de la ciudad</span><span class="sp"></span><button class="lnk" onclick="irA('mapa')">Ver en el mapa →</button></div>
         <div class="hrow">
           <div><div class="big">${cu(x.hechosGeo)}<span class="of">/ ${fmt(x.totalGeo)}</span></div>
-          <div class="cap">contenedores de GEO TRACK atendidos ${esHoy?'hoy':unDia?'ese día':'en el periodo'}.</div></div>
+          <div class="cap">contenedores de GEO TRACK levantados ${esHoy?'hoy':unDia?'ese día':'en el periodo'}.</div></div>
           ${gauge(x.cob)}
         </div>
         ${rs.length?`<div class="strip">${rs.map(r=>`<div style="flex:${r.total};--rc:${rutaColor(r.ruta)}" onclick="filtrarRuta('${jsq(r.ruta)}');irA('mapa')" ${tipAttr(`<div class="t">${esc(r.ruta)}</div><b>${pct(r.hechos,r.total)}%</b> · ${fmt(r.hechos)} de ${fmt(r.total)}`)}><i style="width:${pct(r.hechos,r.total)}%"></i></div>`).join('')}</div>
@@ -1537,9 +1537,9 @@ function vVivo(){
         ${proyeccion(x,d,h)}
       </div>
       <div class="grid g4">
-        ${stat('Contenedores atendidos',cu(x.tachos.size),plural(x.regs.length,'registro'),spkU,'var(--c3)',null,unDia?'Acumulado por hora':'Por día')}
-        ${stat('Piezas cambiadas',cu(x.tc),`en ${plural(x.conCambios,'contenedor','contenedores')}`,spkC,'var(--c1)')}
-        ${stat('Ajustes',cu(x.ta),'sin reemplazo de pieza',spkA,'var(--aj)')}
+        ${stat('Contenedores levantados',cu(x.tachos.size),plural(x.regs.length,'registro'),spkU,'var(--c3)',null,unDia?'Acumulado por hora':'Por día')}
+        ${stat('Repuestos a cambiar',cu(x.tc),`en ${plural(x.conCambios,'contenedor','contenedores')}`,spkC,'var(--c1)')}
+        ${stat('Ajustes por hacer',cu(x.ta),'sin repuesto',spkA,'var(--aj)')}
         ${stat('Ritmo',x.ritmo!=null?Math.round(x.ritmo)+'<small>min</small>':'—','por contenedor, promedio',null)}
       </div>
       <div class="chipline rv">
@@ -1692,28 +1692,50 @@ function vTiempos(){
 
 /* ── 06 PIEZAS ───────────────────────────────────────────────────── */
 function vPiezas(){
-  const x=X,pz=x.piezas.filter(p=>p.c||p.a).sort((a,b)=>(b.c+b.a)-(a.c+a.a));
+  const x=X,P=D.piezas||[],pz=x.piezas.filter(p=>p.c||p.a).sort((a,b)=>(b.c-a.c)||(b.a-a.a));
   const grp={};x.piezas.forEach(p=>{grp[p.g]=grp[p.g]||{c:0,a:0};grp[p.g].c+=p.c;grp[p.g].a+=p.a;});
   const gk=Object.keys(grp).filter(k=>grp[k].c||grp[k].a).sort((a,b)=>(grp[b].c+grp[b].a)-(grp[a].c+grp[a].a));
   const gt=gk.reduce((s,k)=>s+grp[k].c+grp[k].a,0),GC=CAT();
+  // contenedores que necesitan cada pieza (cambio), y cuántos contenedores tienen algo por hacer
+  const contC=new Map(),contA=new Map(),conNec=new Set();
+  x.regs.forEach(r=>r.it.forEach(([k,t,q])=>{const m=t==='c'?contC:contA;if(!m.has(k))m.set(k,new Set());m.get(k).add(r.tacho);conNec.add(r.tacho);}));
+  const rutas=x.rutas.filter(r=>r.regs);
+  NEC_CSV=()=>{
+    const q=v=>{const t=String(v??'');return /[",;\n]/.test(t)?'"'+t.replace(/"/g,'""')+'"':t;};
+    const rs=[...new Set(x.regs.map(r=>r.ruta||'SIN RUTA'))].sort((a,b)=>String(a).localeCompare(String(b),undefined,{numeric:true}));
+    const porRuta=new Map();x.regs.forEach(r=>r.it.forEach(([k,t,n])=>{if(t!=='c')return;const key=k+'|'+(r.ruta||'SIN RUTA');porRuta.set(key,(porRuta.get(key)||0)+n);}));
+    const H=['Pieza','Grupo','Cantidad a comprar','Contenedores que la necesitan','Ajustes por hacer'].concat(rs.map(r=>'Comprar · '+r));
+    const rows=pz.map(p=>[p.n,p.g,p.c,(contC.get(p.i)||new Set()).size,p.a].concat(rs.map(r=>porRuta.get(p.i+'|'+r)||0)));
+    const txt='﻿'+[H].concat(rows).map(r=>r.map(q).join(';')).join('\n');
+    const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([txt],{type:'text/csv;charset=utf-8'}));
+    const [d,h]=calcRango();a.download=`necesidades_${F.ciudad}_${d}_${h}.csv`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+  };
   main.innerHTML=`
-  ${cab('06','Pie<em>zas</em>','Qué se cambia y qué se ajusta. Sirve para planificar compras de repuestos y respalda las actas de entrega.')}
+  ${cab('06','Necesi<em>dades</em>','Lo que se levantó en campo: qué repuestos hay que comprar y qué hay que ajustar en cada contenedor, para planificar el preventivo y el correctivo.')}
   <div class="grid g4">
-    ${stat('Piezas cambiadas',cu(x.tc),'',null)}
-    ${stat('Ajustes',cu(x.ta),'',null)}
-    ${stat('Tipos de pieza',cu(pz.length),`de ${(D.piezas||[]).length} revisadas`,null)}
-    ${stat('Por contenedor',x.tachos.size?(x.tc/x.tachos.size).toFixed(1):'0','piezas cambiadas, promedio',null)}
+    ${stat('Contenedores levantados',cu(x.tachos.size),`${pct(x.hechosGeo,x.totalGeo)}% de GEO TRACK`,null)}
+    ${stat('Con algo por hacer',cu(conNec.size),`${pct(conNec.size,x.tachos.size)}% de los levantados`,null)}
+    ${stat('Repuestos a comprar',cu(x.tc),`${plural(pz.filter(p=>p.c).length,'tipo de pieza','tipos de pieza')}`,null)}
+    ${stat('Ajustes por hacer',cu(x.ta),'sin repuesto',null)}
+  </div>
+  <div class="card rv mt"><div class="lab"><h3>Lista de compra</h3><button class="btn" id="necCsv" style="margin-left:auto">Descargar lista (CSV)</button></div>
+    ${pz.length?`<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Pieza</th><th>Grupo</th><th class="r">A comprar</th><th class="r">Contenedores</th><th class="r">Ajustes</th></tr></thead><tbody>${pz.map(p=>`<tr style="cursor:default"><td><b style="font-weight:600">${esc(p.n)}</b></td><td style="color:var(--mute)">${esc(p.g)}</td><td class="r"><b>${fmt(p.c)}</b></td><td class="r">${fmt((contC.get(p.i)||new Set()).size)}</td><td class="r">${fmt(p.a)}</td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">Todavía no hay necesidades levantadas en este periodo.</div>'}
   </div>
   <div class="split mt">
-    <div class="card rv"><div class="lab"><h3>Ranking de piezas</h3></div>
-      ${pz.length?leyenda([['var(--c1)','Cambios'],['var(--aj)','Ajustes']])+hbars(pz.map(p=>({label:p.n,c:p.c,a:p.a})),[{k:'c',name:'Cambios',color:'var(--c1)'},{k:'a',name:'Ajustes',color:'var(--aj)'}]):'<div class="empty">Sin piezas cambiadas ni ajustes en este periodo.</div>'}
+    <div class="card rv"><div class="lab"><h3>Lo que más se necesita</h3></div>
+      ${pz.length?leyenda([['var(--c1)','Cambio (comprar)'],['var(--aj)','Ajuste']])+hbars(pz.slice(0,15).map(p=>({label:p.n,c:p.c,a:p.a})),[{k:'c',name:'Cambio',color:'var(--c1)'},{k:'a',name:'Ajuste',color:'var(--aj)'}]):'<div class="empty">Sin datos.</div>'}
     </div>
     <div class="card rv"><div class="lab"><h3>Por grupo</h3></div>
-      ${gk.length?`<div class="strip" style="height:16px;margin:4px 0 18px">${gk.map((k,i)=>`<div style="flex:${grp[k].c+grp[k].a};--rc:${GC[i]}" ${tipAttr(`<div class="t">${esc(k)}</div>${fmt(grp[k].c)} cambios · ${fmt(grp[k].a)} ajustes`)}><i style="width:100%"></i></div>`).join('')}</div>
-      <table class="tbl"><thead><tr><th>Grupo</th><th class="r">Cambios</th><th class="r">Ajustes</th><th class="r">%</th></tr></thead><tbody>${gk.map((k,i)=>`<tr style="cursor:default"><td><span style="display:flex;align-items:center;gap:8px"><i class="key" style="--rc:${GC[i]}"></i>${esc(k)}</span></td><td class="r">${fmt(grp[k].c)}</td><td class="r">${fmt(grp[k].a)}</td><td class="r"><b>${pct(grp[k].c+grp[k].a,gt)}%</b></td></tr>`).join('')}</tbody></table>`:'<div class="empty">Sin datos.</div>'}
+      ${gk.length?`<div class="strip" style="height:16px;margin:4px 0 18px">${gk.map((k,i)=>`<div style="flex:${grp[k].c+grp[k].a};--rc:${GC[i]}" ${tipAttr(`<div class="t">${esc(k)}</div>${fmt(grp[k].c)} a comprar · ${fmt(grp[k].a)} ajustes`)}><i style="width:100%"></i></div>`).join('')}</div>
+      <table class="tbl"><thead><tr><th>Grupo</th><th class="r">A comprar</th><th class="r">Ajustes</th><th class="r">%</th></tr></thead><tbody>${gk.map((k,i)=>`<tr style="cursor:default"><td><span style="display:flex;align-items:center;gap:8px"><i class="key" style="--rc:${GC[i]}"></i>${esc(k)}</span></td><td class="r">${fmt(grp[k].c)}</td><td class="r">${fmt(grp[k].a)}</td><td class="r"><b>${pct(grp[k].c+grp[k].a,gt)}%</b></td></tr>`).join('')}</tbody></table>`:'<div class="empty">Sin datos.</div>'}
     </div>
+  </div>
+  <div class="card rv mt"><div class="lab"><h3>Por ruta</h3></div>
+    ${rutas.length?`<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Ruta</th><th class="r">Levantados</th><th class="r">De GEO TRACK</th><th class="r">Repuestos</th><th class="r">Ajustes</th><th class="r">Choques</th></tr></thead><tbody>${rutas.map(r=>`<tr style="cursor:default"><td>${rutaTag(r.ruta)}</td><td class="r"><b>${fmt(new Set(x.regs.filter(g=>(g.ruta||'SIN RUTA')===r.ruta).map(g=>g.tacho)).size)}</b></td><td class="r">${r.total?fmt(r.total):'—'}</td><td class="r">${fmt(r.tc)}</td><td class="r">${fmt(r.ta)}</td><td class="r">${fmt(r.ch)}</td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">Sin datos.</div>'}
   </div>`;
+  $('#necCsv').onclick=()=>NEC_CSV();
 }
+let NEC_CSV=()=>{};
 
 /* ── 07 REGISTROS ────────────────────────────────────────────────── */
 function vRegistros(){
@@ -1786,7 +1808,7 @@ function estadoDe(t){if(!t)return 'pend';if(t.ch||t.cc)return 'golpe';if(t.tc>0)
 function vMapa(extra){
   if(extra&&extra.equipo){MOPT.equipo=extra.equipo;LS.set('gs-sv-mapa',MOPT);}
   if(typeof L==='undefined'){main.innerHTML=cab('02','Ma<em>pa</em>')+'<div class="card empty">El mapa no pudo cargar (señal débil). Recarga la página para intentarlo de nuevo.</div>';return;}
-  main.innerHTML=`${innerWidth>760?cab('02','Ma<em>pa</em>','Contenedores atendidos y pendientes, con el contorno de cada ruta. Cambia la vista en el panel.'):''}
+  main.innerHTML=`${innerWidth>760?cab('02','Ma<em>pa</em>','Contenedores levantados y pendientes, con el contorno de cada ruta. Cambia la vista en el panel.'):''}
   <div class="mapwrap rv"><div id="map"></div>
     <div class="mpanel${innerWidth<760?' min':''}" id="mpanel">
       <div class="mh" id="mh"><span>Capas y leyenda</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></div>
