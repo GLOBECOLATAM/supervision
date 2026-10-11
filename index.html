@@ -538,6 +538,25 @@ body.tv .mapwrap{height:calc(100vh - 150px)}
   .team .num b{font-size:48px}
   .tools .seg{max-width:100%;overflow-x:auto}
 }
+/* ── PANTALLAS CON NOTCH / ISLA Y CELULARES ───────────────────────── */
+header{padding-top:env(safe-area-inset-top,0px)}
+.wrap{padding-left:max(clamp(16px,3vw,32px),env(safe-area-inset-left,0px));padding-right:max(clamp(16px,3vw,32px),env(safe-area-inset-right,0px))}
+@media(max-width:1024px){
+  #modosWrap{height:auto;padding-top:6px;padding-bottom:12px}
+  .seg.modos{display:flex;width:100%;gap:4px}
+  .seg.modos button{flex:1 1 auto;min-width:0;height:40px;padding:0 10px}
+}
+@media(max-width:760px){
+  .top{gap:8px;height:62px}
+  .filters{flex-wrap:wrap;overflow:visible;gap:10px;padding:4px clamp(16px,3vw,32px) 16px}
+  .filters>.seg{display:flex;width:100%;gap:4px}
+  .filters>.seg button{flex:1 1 0;min-width:0;height:38px;padding:0 4px}
+  .filters .pill{flex:1 1 140px;max-width:none;min-width:0;height:44px}
+  .dates.show{width:100%;gap:8px}
+  .dates input{flex:1 1 0;min-width:0;height:44px}
+}
+@media(max-width:420px){#tvBtn{display:none}}
+@media(max-width:380px){.seg.modos button{font-size:12px;padding:0 6px}.filters>.seg button{font-size:12px}.dsp{font-size:46px;overflow-wrap:anywhere}}
 @media(max-width:560px){.kv{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:420px){.g4{grid-template-columns:repeat(2,minmax(0,1fr))}.stat{padding:14px 14px 12px}.stat .v{font-size:32px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
@@ -639,8 +658,20 @@ async function api(cuerpo,ms){
   try{
     const r=await fetch(url,{method:'POST',headers:{'Content-Type':'text/plain;charset=UTF-8'},
       body:JSON.stringify({...cuerpo,token:SES.token,device:DEVICE}),signal:ctl.signal,redirect:'follow'});
-    return await r.json();
+    const j=await r.json();
+    if(j&&j.error==='ciudad_no_permitida'&&cuerpo.action!=='sv_estado')setTimeout(refrescarCiudad,0);
+    return j;
   }finally{clearTimeout(to);}
+}
+/* La ciudad sale de la Base de identificaciones: si allí la cambian, se ajusta sola */
+let REF_C=false;
+async function refrescarCiudad(){
+  if(REF_C)return;REF_C=true;
+  try{
+    const r=await api({action:'sv_estado'},40000);
+    if(r&&r.ok){S=r;OFF=r.ahora-Date.now();guardarCache({estado:r});F.persona='';F.ruta='';F.ciudad='';prepararEstado();guardarF();recargar(true);}
+    else if(r&&r.error)pantallaError(r.error);
+  }catch(e){}finally{REF_C=false;}
 }
 
 /* ---------- fechas (Ecuador) ---------- */
@@ -712,7 +743,8 @@ const MSG={
   hoja_mant_inaccesible:['No puedo abrir la hoja de Mantenimiento','Revisa el enlace en CONFIG y que la cuenta del script tenga acceso.'],
   sin_pestanas_mant:['Aún no hay registros','La hoja de Mantenimiento todavía no tiene pestañas «Mantenimiento · CIUDAD».'],
   ciudad_sin_datos:['Esa ciudad no tiene registros','Elige otra ciudad.'],
-  ciudad_no_permitida:['Solo puedes ver tu ciudad','Así está configurado en la hoja de supervisión.'],
+  ciudad_no_permitida:['Tu ciudad cambió','Actualizando con la ciudad de tu ficha…'],
+  tu_ciudad_sin_datos:['Tu ciudad aún no tiene registros','La ciudad de tu ficha en la Base de identificaciones todavía no tiene pestañas de mantenimiento.'],
   rango_largo:['Rango muy largo','Elige hasta 3 meses.'],
   fechas_invalidas:['Fechas inválidas','Revisa el rango.'],
   sin_api:['Abre primero el portal','Entra a la supervisión desde el portal para que el equipo sepa a dónde conectarse.'],
