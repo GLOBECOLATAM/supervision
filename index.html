@@ -540,6 +540,61 @@ body.tv .mapwrap{height:calc(100vh - 150px)}
   .team .num b{font-size:48px}
   .tools .seg{max-width:100%;overflow-x:auto}
 }
+/* ── ACTAS ───────────────────────────────────────────────────────── */
+.acta-b{margin-left:auto;display:inline-flex;align-items:center;gap:8px;background:var(--ink)!important;color:var(--bg)!important;border-color:var(--ink)!important}
+.af{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-top:12px}
+.af a{display:block;aspect-ratio:4/3;border-radius:10px;overflow:hidden;background:var(--s2);border:1px solid var(--line)}
+.af img{width:100%;height:100%;object-fit:cover;display:block}
+.af a.err{display:grid;place-items:center;font-size:12px;color:var(--mute)}.af a.err::after{content:"Abrir foto"}
+#actaOv{position:fixed;inset:0;z-index:2000;background:#e9edf1;overflow:auto;display:none;padding-bottom:40px}
+#actaOv.show{display:block}
+body.con-acta{overflow:hidden}
+.abar{position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:10px;padding:calc(10px + env(safe-area-inset-top,0px)) 16px 10px;background:#071A2B;color:#fff}
+.abar span{flex:1}.abar .btn{background:#fff;color:#071A2B;border-color:#fff}
+.adoc{max-width:880px;margin:18px auto;background:#fff;color:#0A1622;padding:34px 38px;border-radius:6px;box-shadow:0 10px 40px -12px rgba(0,0,0,.25);font:13px/1.5 Arial,Helvetica,sans-serif}
+.adoc h1{font:700 22px/1.2 Arial,sans-serif;margin:4px 0 14px;letter-spacing:-.01em}
+.adoc h2{font:700 15px/1.3 Arial,sans-serif;margin:24px 0 8px;padding-bottom:6px;border-bottom:2px solid #071A2B}
+.adoc h4{font:700 12px/1.3 Arial,sans-serif;margin:0 0 6px;text-transform:uppercase;letter-spacing:.06em;color:#44576A}
+.adoc .am{font:700 11px/1 Arial,sans-serif;letter-spacing:.2em;color:#1D9E75}
+.adoc .as{color:#44576A;margin:10px 0 0}
+.adoc .ak{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px 16px;padding:12px 14px;background:#F2F5F8;border-radius:8px}
+.adoc .ak.sm{padding:8px 12px;margin:8px 0}
+.adoc .ak span{display:block;font-size:10.5px;color:#7B8B9B;text-transform:uppercase;letter-spacing:.06em}
+.adoc .ak b{font-weight:600}.adoc a{color:#185FA5}
+.adoc .ar{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:18px}
+.adoc .ar>div{border:1px solid #dfe5ea;border-radius:8px;padding:10px 12px}
+.adoc .ar>div.hi{border-color:#1D9E75;background:#EAF7F1}
+.adoc .ar span{display:block;font-size:11px;color:#44576A}.adoc .ar b{display:block;font-size:26px;line-height:1.1;margin:4px 0 2px}.adoc .ar small{color:#7B8B9B;font-size:11px}
+.adoc .at{width:100%;border-collapse:collapse;font-size:12.5px}
+.adoc .at th{background:#071A2B;color:#fff;text-align:left;padding:7px 9px;font-weight:600}
+.adoc .at td{padding:6px 9px;border-bottom:1px solid #e5e9ee}
+.adoc .at .r{text-align:right}.adoc .at tfoot td{font-weight:700;background:#F2F5F8;border-top:2px solid #071A2B}
+.adoc .vac{color:#7B8B9B;font-style:italic;padding:6px 0}
+.adoc .afi{display:grid;grid-template-columns:repeat(3,1fr);gap:28px;margin:46px 0 10px}
+.adoc .afi div{text-align:center;font-size:12px;color:#44576A}.adoc .afi i{display:block;border-top:1px solid #0A1622;margin-bottom:6px;height:40px}
+.adoc .ac{border:1px solid #dfe5ea;border-radius:8px;padding:14px;margin:12px 0;break-inside:avoid;page-break-inside:avoid}
+.adoc .ach{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.adoc .ach b{font-size:15px}.adoc .an{display:inline-grid;place-items:center;min-width:24px;height:24px;border-radius:12px;background:#071A2B;color:#fff;font-size:11px;font-weight:700;margin-right:8px}
+.adoc .ap{font-size:12px;color:#44576A}
+.adoc .acol{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:8px}
+.adoc ul{margin:0;padding-left:18px}.adoc li{margin:2px 0}
+.adoc .ao{margin:8px 0 0;color:#2b3b4b}
+.adoc .af{grid-template-columns:repeat(4,1fr)}
+.adoc .af a{border-radius:4px;background:#F2F5F8;border-color:#dfe5ea}
+@media(max-width:640px){.adoc{padding:20px 16px;margin:0;border-radius:0}.adoc .ar{grid-template-columns:repeat(2,1fr)}.adoc .acol{grid-template-columns:1fr}.adoc .af{grid-template-columns:repeat(2,1fr)}.adoc .afi{grid-template-columns:1fr;gap:10px}}
+@media print{
+  @page{size:A4;margin:12mm}
+  body.con-acta>*:not(#actaOv){display:none!important}
+  body.con-acta{overflow:visible;background:#fff;padding:0}
+  body.con-acta::before{display:none}
+  #actaOv{position:static;display:block!important;background:#fff;overflow:visible;padding:0}
+  .abar{display:none!important}
+  .adoc{box-shadow:none;margin:0;max-width:none;padding:0;border-radius:0}
+  .adoc .pb{break-before:page;page-break-before:always}
+  .adoc .af{grid-template-columns:repeat(4,1fr)}
+  .adoc .at th,.adoc .an{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .adoc .ar>div.hi,.adoc .at tfoot td,.adoc .ak{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
 /* ── PANTALLAS CON NOTCH / ISLA Y CELULARES ───────────────────────── */
 header{padding-top:env(safe-area-inset-top,0px)}
 .wrap{padding-left:max(clamp(16px,3vw,32px),env(safe-area-inset-left,0px));padding-right:max(clamp(16px,3vw,32px),env(safe-area-inset-right,0px))}
@@ -913,9 +968,9 @@ async function cargarPC(conGeo){
   finally{CARGANDO=false;}
 }
 
-const pcPrev=()=>(PC.regs||[]).map(a=>({id:a[0],fecha:a[1],hora:a[2],r1:a[3],r2:a[4],tacho:a[5],ruta:a[6],lat:a[7],lng:a[8],acc:a[9],sin:a[10],tc:a[11],ta:a[12],obs:a[13],it:a[14]||[],foto:a[15],av:a[16],
+const pcPrev=()=>(PC.regs||[]).map(a=>({id:a[0],fecha:a[1],hora:a[2],r1:a[3],r2:a[4],tacho:a[5],ruta:a[6],lat:a[7],lng:a[8],acc:a[9],sin:a[10],tc:a[11],ta:a[12],obs:a[13],it:a[14]||[],foto:a[15],av:a[16],fotos:Array.isArray(a[17])?a[17]:(a[15]?[a[15]]:[]),
   personas:[a[3],a[4]].map(x=>String(x||'').trim()).filter(Boolean)}));
-const pcCorr=()=>(PC.items||[]).map(a=>({id:a[0],prev:a[1],fp:a[2],tacho:a[3],ruta:a[4],grupo:a[5],item:a[6],acc:a[7],cant:a[8],rp:a[9],est:a[10],fc:a[11],hc:a[12],rc:a[13],obs:a[14],lat:a[15],lng:a[16],foto:a[17],nf:a[18],
+const pcCorr=()=>(PC.items||[]).map(a=>({id:a[0],prev:a[1],fp:a[2],tacho:a[3],ruta:a[4],grupo:a[5],item:a[6],acc:a[7],cant:a[8],rp:a[9],est:a[10],fc:a[11],hc:a[12],rc:a[13],obs:a[14],lat:a[15],lng:a[16],foto:a[17],nf:a[18],fotos:Array.isArray(a[19])?a[19]:(a[17]?[a[17]]:[]),
   k:/^corregido$/i.test(a[10])?'hecho':/no se pudo/i.test(a[10])?'nopudo':'pend'}));
 function pintarRutasPC(lista){
   const ru=new Set(lista.map(x=>x.ruta).filter(Boolean));GEO.forEach(g=>{if(g.ruta)ru.add(g.ruta);});if(F.ruta)ru.add(F.ruta);
@@ -953,6 +1008,145 @@ function mapaPC(puntos,nombres){
   $('#pcLeg').innerHTML=nombres.map(([t,c,n,h])=>`<span><span class="sw" style="background:${h?'transparent':c};border-color:${c}"></span>${esc(t)} <b>${fmt(n)}</b></span>`).join('');
 }
 
+
+/* ─────────── Actas (preventivo y correctivo) ───────────
+   Se arman con lo que trae el periodo y la ruta elegidos. Puntaje:
+   cada GRUPO con al menos un trabajo en un contenedor suma 1 (lo más
+   importante) y cada ÍTEM suma por separado. Al final va el informe de
+   cada contenedor con todas sus fotos. Se imprime o se guarda en PDF. */
+const ACTA_GRUPOS_PREV=[["Lavado",["Lavado","Hidrolavado","Limpieza manual","Limpieza externa"]],["Ajuste de tapón",["Ajuste de tapón"]],["Sistema de apertura",["Tapa normal","Tapa buzón","Marco de tapa","Perno de tapa","Cable","Pedal","Soporte de pedal","Resorte de pedal","Amortiguador","Limitador"]],["Señalética · adhesivos",["Numeración","No estacionarse","Adhesivo lateral","Línea de centraje"]],["Verificación funcional",["Caucho de tapa","Perno autoperforante","Manilla","Triángulo lateral"]],["Rodillo de toma",["Rodillo de toma y arandela"]],["Rodillo anti tropiezo",["Rodillo anti tropiezo"]],["Restauración de pintura",["Grafitis","Retiro de óxido","Pintura"]],["Pernos, vinchas, bujes y remaches",["Pernos","Vinchas","Buje de tapa","Remaches"]]];
+const ACTA_ORDEN=ACTA_GRUPOS_PREV.map(g=>g[0]);
+const ACTA_GRUPO_DE={};ACTA_GRUPOS_PREV.forEach(([g,its])=>its.forEach(i=>{ACTA_GRUPO_DE[normN(i)]=g;}));
+const actaGrupo=i=>ACTA_GRUPO_DE[normN(i)]||'Otros';
+const actaItem=i=>/^(hidrolavado|limpieza manual|limpieza externa)$/i.test(String(i).trim())?'Lavado':i;
+const cantDe=s=>{const m=String(s||'').match(/×\s*(\d+)/);return m?Number(m[1]):1;};
+const fotoUrl=(id,w)=>`https://drive.google.com/thumbnail?id=${encodeURIComponent(id)}&sz=w${w||640}`;
+const fotoLink=id=>`https://drive.google.com/file/d/${encodeURIComponent(id)}/view`;
+const ordGrupo=(a,b)=>{const x=ACTA_ORDEN.indexOf(a),y=ACTA_ORDEN.indexOf(b);return (x<0?99:x)-(y<0?99:y)||a.localeCompare(b);};
+
+function actaPeriodo(){const [d,h]=calcRango();return d===h?larga(d)+' '+d.slice(0,4):`${corta(d)}/${d.slice(0,4)} al ${corta(h)}/${h.slice(0,4)}`;}
+function actaCabecera(titulo,sub){
+  const hoy=new Date(),f=`${String(hoy.getDate()).padStart(2,'0')}/${String(hoy.getMonth()+1).padStart(2,'0')}/${hoy.getFullYear()} ${String(hoy.getHours()).padStart(2,'0')}:${String(hoy.getMinutes()).padStart(2,'0')}`;
+  return `<div class="ah"><div class="am">GLOBECO SMART</div><h1>${esc(titulo)}</h1>
+    <div class="ak"><div><span>Ciudad</span><b>${esc(F.ciudad||'—')}</b></div><div><span>Periodo</span><b>${esc(actaPeriodo())}</b></div>
+    <div><span>Ruta</span><b>${esc(F.ruta||'Todas')}</b></div><div><span>Emitida</span><b>${esc(f)}</b></div>
+    <div><span>Supervisor</span><b>${esc((S&&S.usuario&&S.usuario.nombre)||'—')}</b></div></div>${sub?`<p class="as">${sub}</p>`:''}</div>`;
+}
+const actaTabla=(cab,filas,tot,nt=1)=>`<table class="at"><thead><tr>${cab.map((c,i)=>`<th${i>=nt?' class="r"':''}>${esc(c)}</th>`).join('')}</tr></thead><tbody>${filas.map(f=>`<tr>${f.map((c,i)=>`<td${i>=nt?' class="r"':''}>${i?c:esc(c)}</td>`).join('')}</tr>`).join('')||`<tr><td colspan="${cab.length}" class="vac">Sin datos en el periodo.</td></tr>`}</tbody>${tot?`<tfoot><tr>${tot.map((c,i)=>`<td${i>=nt?' class="r"':''}>${c}</td>`).join('')}</tr></tfoot>`:''}</table>`;
+const actaFotos=ids=>ids.length?`<div class="af">${ids.map(id=>`<a href="${fotoLink(id)}" target="_blank" rel="noopener"><img src="${fotoUrl(id)}" alt="Foto" loading="eager" onerror="this.parentNode.classList.add('err')"></a>`).join('')}</div>`:'<div class="vac">Sin fotos.</div>';
+const actaFirmas=()=>`<div class="afi"><div><i></i>Elaborado por</div><div><i></i>Revisado por</div><div><i></i>Recibido por</div></div>`;
+
+function actaPreventivo(){
+  const regs=pcPrev().filter(r=>!F.ruta||r.ruta===F.ruta).sort((a,b)=>(a.fecha+a.hora).localeCompare(b.fecha+b.hora));
+  const G={},I={},C={};let conTrabajo=0,lavados=0,puntaje=0,items=0;
+  const fichas=regs.map(r=>{
+    const hechos=[],cambios=[];
+    r.it.forEach(([n,s])=>{
+      const item=actaItem(n),grupo=actaGrupo(n);
+      if(/^aj/i.test(s)||/^se hizo/i.test(s)){hechos.push([grupo,item,/^se hizo/i.test(s)?'Se hizo':'Ajuste']);}
+      else if(/^cambio/i.test(s))cambios.push([grupo,item,cantDe(s)]);
+    });
+    // un mismo ítem no cuenta dos veces en el mismo contenedor (lavado viejo eran 3 puntos)
+    const vistos=new Set(),hU=hechos.filter(h=>{const k=h[1];if(vistos.has(k))return false;vistos.add(k);return true;});
+    const grupos=[...new Set(hU.map(h=>h[0]))];
+    grupos.forEach(g=>{(G[g]=G[g]||{p:0,i:0}).p++;});
+    hU.forEach(([g,i])=>{G[g].i++;const k=g+'|'+i;(I[k]=I[k]||{g,i,n:0}).n++;});
+    cambios.forEach(([g,i,q])=>{const k=g+'|'+i;(C[k]=C[k]||{g,i,n:0,q:0});C[k].n++;C[k].q+=q;});
+    if(hU.length)conTrabajo++;
+    if(hU.some(h=>h[1]==='Lavado'))lavados++;
+    puntaje+=grupos.length;items+=hU.length;
+    return {r,hU,grupos,cambios};
+  });
+  const gFil=Object.keys(G).sort(ordGrupo).map(g=>[g,`<b>${fmt(G[g].p)}</b>`,fmt(G[g].i)]);
+  const iFil=Object.values(I).sort((a,b)=>ordGrupo(a.g,b.g)||b.n-a.n).map(x=>[x.i,esc(x.g),`<b>${fmt(x.n)}</b>`]);
+  const cFil=Object.values(C).sort((a,b)=>ordGrupo(a.g,b.g)||b.q-a.q).map(x=>[x.i,esc(x.g),fmt(x.n),`<b>${fmt(x.q)}</b>`]);
+  const totC=Object.values(C).reduce((s,x)=>s+x.q,0);
+  const sin=regs.filter(r=>r.sin);
+  const anexo=fichas.map(({r,hU,grupos,cambios},n)=>`<section class="ac">
+    <div class="ach"><div><span class="an">${n+1}</span><b>Contenedor ${esc(r.tacho)}</b></div><div class="ap">Puntaje <b>${grupos.length}</b> grupo${grupos.length===1?'':'s'} · <b>${hU.length}</b> ítem${hU.length===1?'':'s'}</div></div>
+    <div class="ak sm"><div><span>Fecha</span><b>${esc(larga(r.fecha))} ${esc(r.hora)}</b></div><div><span>Ruta</span><b>${esc(r.ruta||'—')}</b></div>
+      <div><span>Equipo</span><b>${esc(r.personas.join(' y ')||'—')}</b></div><div><span>Ubicación</span><b>${r.lat!=null?`<a href="https://www.google.com/maps?q=${r.lat},${r.lng}" target="_blank" rel="noopener">${(+r.lat).toFixed(6)}, ${(+r.lng).toFixed(6)}</a>`:'—'}</b></div></div>
+    <div class="acol"><div><h4>Preventivo realizado</h4>${hU.length?`<ul>${grupos.sort(ordGrupo).map(g=>{const its=hU.filter(h=>h[0]===g);return `<li><b>${esc(g)}</b>${its.length===1&&its[0][1]===g?' · '+esc(its[0][2]==='Ajuste'?'ajuste':'se hizo'):': '+its.map(h=>esc(h[1])+(h[2]==='Ajuste'?' (ajuste)':'')).join(', ')}</li>`;}).join('')}</ul>`:'<div class="vac">Sin trabajos de preventivo.</div>'}</div>
+      <div><h4>Para correctivo</h4>${cambios.length||r.sin?`<ul>${cambios.map(([g,i,q])=>`<li>${esc(i)} · cambio${q>1?' ×'+q:''}</li>`).join('')}${r.sin?`<li>Siniestrado: ${esc(r.sin)}</li>`:''}</ul>`:'<div class="vac">Nada pendiente.</div>'}</div></div>
+    ${r.obs?`<p class="ao"><b>Observaciones:</b> ${esc(r.obs)}</p>`:''}
+    ${actaFotos(r.fotos)}
+  </section>`).join('');
+  return actaCabecera('Acta de mantenimiento preventivo','Ajustes y lavado realizados en sitio. Los cambios de pieza se derivan al correctivo.')+`
+  <div class="ar">
+    <div><span>Contenedores</span><b>${fmt(regs.length)}</b><small>${fmt(conTrabajo)} con preventivo</small></div>
+    <div class="hi"><span>Puntaje por grupos</span><b>${fmt(puntaje)}</b><small>1 punto por grupo trabajado</small></div>
+    <div><span>Ítems realizados</span><b>${fmt(items)}</b><small>${fmt(lavados)} lavados</small></div>
+    <div><span>Al correctivo</span><b>${fmt(totC)}</b><small>piezas a cambiar${sin.length?' · '+sin.length+' siniestrado'+(sin.length>1?'s':''):''}</small></div>
+  </div>
+  <h2>1. Puntaje por grupo</h2>${actaTabla(['Grupo','Puntaje (contenedores)','Ítems'],gFil,['Total',`<b>${fmt(puntaje)}</b>`,fmt(items)])}
+  <h2>2. Ítems realizados</h2>${actaTabla(['Ítem','Grupo','Cantidad'],iFil,['Total','',`<b>${fmt(items)}</b>`],2)}
+  <h2>3. Derivado al correctivo</h2>${actaTabla(['Ítem','Grupo','Contenedores','Piezas'],cFil,cFil.length?['Total','','',`<b>${fmt(totC)}</b>`]:null,2)}
+  ${actaFirmas()}
+  <h2 class="pb">4. Informe por contenedor</h2>${anexo||'<div class="vac">Sin preventivos en el periodo.</div>'}`;
+}
+
+function actaCorrectivo(){
+  const [desde,hasta]=calcRango();
+  const hechos=pcCorr().filter(x=>(!F.ruta||x.ruta===F.ruta)&&x.k==='hecho'&&x.fc&&x.fc>=desde&&x.fc<=hasta);
+  const nopudo=pcCorr().filter(x=>(!F.ruta||x.ruta===F.ruta)&&x.k==='nopudo'&&x.fc&&x.fc>=desde&&x.fc<=hasta);
+  const porCont=new Map();
+  const llave=x=>x.tacho+'|'+x.prev;
+  hechos.concat(nopudo).forEach(x=>{const k=llave(x);let c=porCont.get(k);if(!c){c={tacho:x.tacho,ruta:x.ruta,fp:x.fp,hechos:[],nopudo:[],fotos:new Set(),fc:x.fc,hc:x.hc,rc:new Set(),obs:new Set(),lat:x.lat,lng:x.lng};porCont.set(k,c);}
+    (x.k==='hecho'?c.hechos:c.nopudo).push(x);(x.fotos||[]).forEach(f=>c.fotos.add(f));if(x.rc)c.rc.add(x.rc);if(x.obs)c.obs.add(x.obs);
+    if((x.fc+x.hc)>(c.fc+c.hc)){c.fc=x.fc;c.hc=x.hc;}if(c.lat==null&&x.lat!=null){c.lat=x.lat;c.lng=x.lng;}});
+  const conts=[...porCont.values()].sort((a,b)=>(a.fc+a.hc).localeCompare(b.fc+b.hc));
+  const G={},I={};let puntaje=0,piezas=0;
+  conts.forEach(c=>{
+    const grupos=[...new Set(c.hechos.map(x=>x.grupo||'Otros'))];c.grupos=grupos;
+    grupos.forEach(g=>{(G[g]=G[g]||{p:0,i:0,q:0}).p++;});
+    c.hechos.forEach(x=>{const g=x.grupo||'Otros';G[g].i++;G[g].q+=x.cant||1;const k=g+'|'+x.item;(I[k]=I[k]||{g,i:x.item,n:0,q:0});I[k].n++;I[k].q+=x.cant||1;});
+    puntaje+=grupos.length;piezas+=c.hechos.reduce((s,x)=>s+(x.cant||1),0);
+  });
+  const gFil=Object.keys(G).sort(ordGrupo).map(g=>[g,`<b>${fmt(G[g].p)}</b>`,fmt(G[g].i),fmt(G[g].q)]);
+  const iFil=Object.values(I).sort((a,b)=>ordGrupo(a.g,b.g)||b.q-a.q).map(x=>[x.i,esc(x.g),fmt(x.n),`<b>${fmt(x.q)}</b>`]);
+  const nFil=nopudo.map(x=>[x.tacho,esc(x.item),esc(x.obs||'—')]);
+  const anexo=conts.map((c,n)=>`<section class="ac">
+    <div class="ach"><div><span class="an">${n+1}</span><b>Contenedor ${esc(c.tacho)}</b></div><div class="ap">Puntaje <b>${c.grupos.length}</b> grupo${c.grupos.length===1?'':'s'} · <b>${c.hechos.length}</b> ítem${c.hechos.length===1?'':'s'}</div></div>
+    <div class="ak sm"><div><span>Corrección</span><b>${esc(larga(c.fc))} ${esc(c.hc||'')}</b></div><div><span>Ruta</span><b>${esc(c.ruta||'—')}</b></div>
+      <div><span>Equipo</span><b>${esc([...c.rc].join(' / ')||'—')}</b></div><div><span>Preventivo</span><b>${esc(c.fp?larga(c.fp):'—')}</b></div></div>
+    <div class="acol"><div><h4>Corregido</h4>${c.hechos.length?`<ul>${c.grupos.sort(ordGrupo).map(g=>`<li><b>${esc(g)}</b>: ${c.hechos.filter(x=>(x.grupo||'Otros')===g).map(x=>esc(x.item)+' · '+esc(x.acc||'')+((x.cant||1)>1?' ×'+x.cant:'')).join(', ')}</li>`).join('')}</ul>`:'<div class="vac">—</div>'}</div>
+      <div><h4>No se pudo</h4>${c.nopudo.length?`<ul>${c.nopudo.map(x=>`<li>${esc(x.item)}${x.obs?' — '+esc(x.obs):''}</li>`).join('')}</ul>`:'<div class="vac">Nada.</div>'}</div></div>
+    ${c.obs.size?`<p class="ao"><b>Observaciones:</b> ${esc([...c.obs].join(' · '))}</p>`:''}
+    ${actaFotos([...c.fotos])}
+  </section>`).join('');
+  return actaCabecera('Acta de mantenimiento correctivo','Cambios de pieza y siniestros resueltos en el periodo.')+`
+  <div class="ar">
+    <div><span>Contenedores</span><b>${fmt(conts.filter(c=>c.hechos.length).length)}</b><small>con corrección</small></div>
+    <div class="hi"><span>Puntaje por grupos</span><b>${fmt(puntaje)}</b><small>1 punto por grupo corregido</small></div>
+    <div><span>Ítems corregidos</span><b>${fmt(hechos.length)}</b><small>${fmt(piezas)} piezas</small></div>
+    <div><span>No se pudo</span><b>${fmt(nopudo.length)}</b><small>ítems</small></div>
+  </div>
+  <h2>1. Puntaje por grupo</h2>${actaTabla(['Grupo','Puntaje (contenedores)','Ítems','Piezas'],gFil,['Total',`<b>${fmt(puntaje)}</b>`,fmt(hechos.length),fmt(piezas)])}
+  <h2>2. Ítems corregidos</h2>${actaTabla(['Ítem','Grupo','Veces','Piezas'],iFil,['Total','',fmt(hechos.length),`<b>${fmt(piezas)}</b>`],2)}
+  ${nFil.length?`<h2>3. No se pudo corregir</h2>${actaTabla(['Contenedor','Ítem','Motivo'],nFil,null,3)}`:''}
+  ${actaFirmas()}
+  <h2 class="pb">${nFil.length?4:3}. Informe por contenedor</h2>${anexo||'<div class="vac">Sin correcciones en el periodo.</div>'}`;
+}
+
+function abrirActa(){
+  if(!PC){toast('Espera a que carguen los datos');return;}
+  const html=PC.modo==='prev'?actaPreventivo():actaCorrectivo();
+  let ov=$('#actaOv');
+  if(!ov){ov=document.createElement('div');ov.id='actaOv';document.body.appendChild(ov);}
+  ov.innerHTML=`<div class="abar"><b>${PC.modo==='prev'?'Acta de preventivo':'Acta de correctivo'}</b><span></span><button class="btn" id="actaPrint">Imprimir / Guardar PDF</button><button class="btn" id="actaX">Cerrar</button></div><div class="adoc" id="actaDoc">${html}</div>`;
+  ov.classList.add('show');document.body.classList.add('con-acta');ov.scrollTop=0;
+  $('#actaX').onclick=()=>{ov.classList.remove('show');document.body.classList.remove('con-acta');};
+  $('#actaPrint').onclick=()=>{
+    const imgs=[...ov.querySelectorAll('img')],faltan=imgs.filter(i=>!i.complete);
+    if(!faltan.length){print();return;}
+    toast('Cargando fotos…');let n=faltan.length;const ya=()=>{if(--n<=0)print();};
+    faltan.forEach(i=>{i.addEventListener('load',ya,{once:true});i.addEventListener('error',ya,{once:true});});
+    setTimeout(()=>{if(n>0){n=0;print();}},12000);
+  };
+}
+
+document.addEventListener('click',e=>{if(e.target.closest('#btnActa'))abrirActa();});
+
 /* ─────────── Preventivo ─────────── */
 function vPrev(){
   const todos=pcPrev();pintarRutasPC(todos);
@@ -965,7 +1159,7 @@ function vPrev(){
   const cnt={};regs.forEach(r=>r.it.forEach(([n,s])=>{const k=n;(cnt[k]=cnt[k]||{a:0,c:0});/^aj/i.test(s)?cnt[k].a++:cnt[k].c++;}));
   const top=Object.entries(cnt).map(([n,v])=>[n,v.a+v.c,v.c>=v.a?'var(--c1)':'var(--aj)']).sort((a,b)=>b[1]-a[1]).slice(0,10);
   main.innerHTML=`
-  ${cab('P','Preven<em>tivo</em>','Revisión preventiva por contenedor. Lo que queda en Ajuste o Cambio pasa al correctivo.')}
+  ${cab('P','Preven<em>tivo</em>','Revisión preventiva por contenedor. El lavado y los ajustes se hacen en sitio; lo que necesita Cambio pasa al correctivo.')}
   <div class="grid g4">
     ${stat('Preventivos',fmt(regs.length),plural(tachos.size,'contenedor','contenedores')+(geoN?` · ${Math.round(tachos.size/geoN*100)}% de ${fmt(geoN)}`:''))}
     ${stat('Con hallazgos',fmt(hall.length),regs.length?Math.round(hall.length/regs.length*100)+'% de los revisados':'—')}
@@ -979,6 +1173,7 @@ function vPrev(){
   <div class="tools rv mt">
     <label class="search"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--mute)" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="q" placeholder="Contenedor, colaborador, ruta o punto" value="${esc(PCQ)}"></label>
     <div class="seg" id="pf">${[['todos','Todos'],['hall','Con hallazgos'],['sin','Siniestrados'],['pend','Correctivo pendiente']].map(([k,t])=>`<button class="${(PCF==='abiertos'?'todos':PCF)===k?'on':''}" data-f="${k}">${t}</button>`).join('')}</div>
+    <button class="btn acta-b" id="btnActa"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg>Generar acta</button>
   </div>
   <div class="card rv" style="padding-top:6px;padding-bottom:6px"><div class="rows" id="rb"></div><div id="rmas"></div></div>`;
   // mapa: revisados por resultado + pendientes del periodo (huecos)
@@ -1038,7 +1233,7 @@ function detallePrev(id){
     <div class="pz">${r.it.length?'<div class="g">Hallazgos</div>'+r.it.map(([n,s])=>`<div class="p"><span>${esc(n)}</span>${/^aj/i.test(s)?'<span class="tag a"><i></i>Ajuste</span>':`<span class="tag c"><i></i>${esc(s)}</span>`}</div>`).join(''):'<div class="g">Puntos</div><div class="p"><span>Todos los puntos revisados</span><span class="tag ok"><i></i>OK</span></div>'}
       ${r.sin?`<div class="p"><span>Siniestrado</span><span class="tag x"><i></i>${esc(r.sin)}</span></div>`:''}</div>
     ${r.obs?`<div class="rev" style="background:var(--s2)"><div class="eyebrow" style="margin-bottom:6px">Observaciones</div><div style="font-size:14px;line-height:1.55">${esc(r.obs)}</div></div>`:''}
-    ${r.foto?`<div class="foto"><a href="https://drive.google.com/file/d/${esc(r.foto)}/view" target="_blank" rel="noopener"><img src="https://drive.google.com/thumbnail?id=${esc(r.foto)}&sz=w900" alt="Foto del contenedor ${esc(r.tacho)}" loading="lazy" onerror="this.outerHTML='<div class=\\'empty\\'>📷 Abrir foto en Drive</div>'"></a></div>`:''}
+    ${r.fotos.length?actaFotos(r.fotos):''}
     <div class="acts" style="margin-top:14px">${maps?`<a class="btn" href="${maps}" target="_blank" rel="noopener">Abrir en Google Maps</a>`:''}</div>`;
   $('#modal').classList.add('show');$('#sheet').scrollTop=0;
 }
@@ -1057,7 +1252,7 @@ function vCorr(){
   const cnt={};pend.concat(nop).forEach(x=>{cnt[x.item]=(cnt[x.item]||0)+1;});
   const top=Object.entries(cnt).sort((a,b)=>b[1]-a[1]).slice(0,10).map(([n,v])=>[n,v,'var(--crit)']);
   main.innerHTML=`
-  ${cab('C','Correc<em>tivo</em>','Ítems que el preventivo dejó en Ajuste o Cambio, y quién los resolvió.')}
+  ${cab('C','Correc<em>tivo</em>','Ítems que el preventivo dejó para Cambio, y quién los resolvió.')}
   <div class="grid g4">
     ${stat('Pendientes',fmt(pend.length),plural(new Set(pend.map(x=>x.tacho)).size,'contenedor','contenedores')+(viejo?` · el más antiguo hace ${viejo} d`:''))}
     ${stat('Corregidos',fmt(hechos.length),'en el periodo'+(prom!=null?` · ${prom.toLocaleString('es-EC',{maximumFractionDigits:1})} días en promedio`:''))}
@@ -1071,6 +1266,7 @@ function vCorr(){
   <div class="tools rv mt">
     <label class="search"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--mute)" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="q" placeholder="Contenedor, ruta, ítem o responsable" value="${esc(PCQ)}"></label>
     <div class="seg" id="pf">${[['abiertos','Pendientes'],['hecho','Corregidos'],['nopudo','No se pudo'],['todos','Todos']].map(([k,t])=>`<button class="${PCF===k?'on':''}" data-f="${k}">${t}</button>`).join('')}</div>
+    <button class="btn acta-b" id="btnActa"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg>Generar acta</button>
   </div>
   <div class="card rv" style="padding-top:6px;padding-bottom:6px"><div class="rows" id="rb"></div><div id="rmas"></div></div>`;
   // mapa: por contenedor, su peor estado
@@ -1129,7 +1325,7 @@ function detalleCorr(id){
       <div><span>Tiempo de atención</span><b>${x.fp&&x.fc?dDias(x.fp,x.fc)+' días':x.fp?'pendiente hace '+diasDesde(x.fp)+' días':'—'}</b></div>
     </div>
     ${x.obs?`<div class="rev" style="background:var(--s2)"><div class="eyebrow" style="margin-bottom:6px">Observación de la corrección</div><div style="font-size:14px;line-height:1.55">${esc(x.obs)}</div></div>`:''}
-    ${x.foto?`<div class="foto"><a href="https://drive.google.com/file/d/${esc(x.foto)}/view" target="_blank" rel="noopener"><img src="https://drive.google.com/thumbnail?id=${esc(x.foto)}&sz=w900" alt="Foto de la corrección" loading="lazy" onerror="this.outerHTML='<div class=\\'empty\\'>📷 Abrir foto en Drive</div>'"></a></div>${x.nf>1?`<div style="font-size:12.5px;color:var(--mute);margin-top:6px">${x.nf} fotos en la hoja de correctivo.</div>`:''}`:''}
+    ${x.fotos.length?actaFotos(x.fotos):''}
     <div class="acts" style="margin-top:14px">${maps?`<a class="btn" href="${maps}" target="_blank" rel="noopener">Abrir en Google Maps</a>`:''}</div>`;
   $('#modal').classList.add('show');$('#sheet').scrollTop=0;
 }
