@@ -581,6 +581,10 @@ body.con-acta{overflow:hidden}
 .adoc .ao{margin:8px 0 0;color:#2b3b4b}
 .adoc .af{grid-template-columns:repeat(4,1fr)}
 .adoc .af a{border-radius:4px;background:#F2F5F8;border-color:#dfe5ea}
+.afad{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px}.adoc .afad .af,.afad .af{grid-template-columns:repeat(2,1fr);margin-top:4px}
+.afad h5,h5.afo{margin:0;font:700 11px/1.3 Arial,sans-serif;text-transform:uppercase;letter-spacing:.06em;color:#44576A}h5.afo{margin-top:10px}
+.abar span a{color:inherit;text-decoration:underline;margin:0 2px}
+@media(max-width:640px){.abar{flex-wrap:wrap;gap:6px}.abar span{flex-basis:100%;order:9;font-size:12px}.abar .btn{padding:7px 10px;font-size:12px}}
 @media(max-width:640px){.adoc{padding:20px 16px;margin:0;border-radius:0}.adoc .ar{grid-template-columns:repeat(2,1fr)}.adoc .acol{grid-template-columns:1fr}.adoc .af{grid-template-columns:repeat(2,1fr)}.adoc .afi{grid-template-columns:1fr;gap:10px}}
 @media print{
   @page{size:A4;margin:12mm}
@@ -1020,11 +1024,14 @@ const ACTA_GRUPO_DE={};ACTA_GRUPOS_PREV.forEach(([g,its])=>its.forEach(i=>{ACTA_
 const actaGrupo=i=>ACTA_GRUPO_DE[normN(i)]||'Otros';
 const actaItem=i=>/^(hidrolavado|limpieza manual|limpieza externa)$/i.test(String(i).trim())?'Lavado':i;
 const cantDe=s=>{const m=String(s||'').match(/×\s*(\d+)/);return m?Number(m[1]):1;};
-const fotoUrl=(id,w)=>`https://drive.google.com/thumbnail?id=${encodeURIComponent(id)}&sz=w${w||640}`;
-const fotoLink=id=>`https://drive.google.com/file/d/${encodeURIComponent(id)}/view`;
+const fotoId=id=>String(id||'').split('#')[0];
+const fotoTipo=id=>{const m=String(id||'').match(/#(antes|despues)/i);return m?m[1].toLowerCase():'';};
+const fotoUrl=(id,w)=>`https://drive.google.com/thumbnail?id=${encodeURIComponent(fotoId(id))}&sz=w${w||640}`;
+const fotoLink=id=>`https://drive.google.com/file/d/${encodeURIComponent(fotoId(id))}/view`;
+let ACTA_R=null;   // [desde,hasta] del acta que se está armando (una por día)
 const ordGrupo=(a,b)=>{const x=ACTA_ORDEN.indexOf(a),y=ACTA_ORDEN.indexOf(b);return (x<0?99:x)-(y<0?99:y)||a.localeCompare(b);};
 
-function actaPeriodo(){const [d,h]=calcRango();return d===h?larga(d)+' '+d.slice(0,4):`${corta(d)}/${d.slice(0,4)} al ${corta(h)}/${h.slice(0,4)}`;}
+function actaPeriodo(){const [d,h]=ACTA_R||calcRango();return d===h?larga(d)+' '+d.slice(0,4):`${corta(d)}/${d.slice(0,4)} al ${corta(h)}/${h.slice(0,4)}`;}
 function actaCabecera(titulo,sub){
   const hoy=new Date(),f=`${String(hoy.getDate()).padStart(2,'0')}/${String(hoy.getMonth()+1).padStart(2,'0')}/${hoy.getFullYear()} ${String(hoy.getHours()).padStart(2,'0')}:${String(hoy.getMinutes()).padStart(2,'0')}`;
   return `<div class="ah"><div class="am">GLOBECO SMART</div><h1>${esc(titulo)}</h1>
@@ -1033,11 +1040,19 @@ function actaCabecera(titulo,sub){
     <div><span>Supervisor</span><b>${esc((S&&S.usuario&&S.usuario.nombre)||'—')}</b></div></div>${sub?`<p class="as">${sub}</p>`:''}</div>`;
 }
 const actaTabla=(cab,filas,tot,nt=1)=>`<table class="at"><thead><tr>${cab.map((c,i)=>`<th${i>=nt?' class="r"':''}>${esc(c)}</th>`).join('')}</tr></thead><tbody>${filas.map(f=>`<tr>${f.map((c,i)=>`<td${i>=nt?' class="r"':''}>${i?c:esc(c)}</td>`).join('')}</tr>`).join('')||`<tr><td colspan="${cab.length}" class="vac">Sin datos en el periodo.</td></tr>`}</tbody>${tot?`<tfoot><tr>${tot.map((c,i)=>`<td${i>=nt?' class="r"':''}>${c}</td>`).join('')}</tr></tfoot>`:''}</table>`;
-const actaFotos=ids=>ids.length?`<div class="af">${ids.map(id=>`<a href="${fotoLink(id)}" target="_blank" rel="noopener"><img src="${fotoUrl(id)}" alt="Foto" loading="eager" onerror="this.parentNode.classList.add('err')"></a>`).join('')}</div>`:'<div class="vac">Sin fotos.</div>';
+const actaFotosG=ids=>`<div class="af">${ids.map(id=>`<a href="${fotoLink(id)}" target="_blank" rel="noopener"><img src="${fotoUrl(id)}" alt="Foto" loading="eager" onerror="this.parentNode.classList.add('err')"></a>`).join('')}</div>`;
+/* Fotos agrupadas: «Antes» y «Después» (las viejas, sin tipo, van como «Fotos») */
+const actaFotos=ids=>{
+  if(!ids||!ids.length)return '<div class="vac">Sin fotos.</div>';
+  const a=ids.filter(i=>fotoTipo(i)==='antes'),d=ids.filter(i=>fotoTipo(i)==='despues'),o=ids.filter(i=>!fotoTipo(i));
+  if(!a.length&&!d.length)return actaFotosG(o);
+  return `<div class="afad"><div><h5>Antes</h5>${a.length?actaFotosG(a):'<div class="vac">—</div>'}</div><div><h5>Después</h5>${d.length?actaFotosG(d):'<div class="vac">—</div>'}</div></div>`+(o.length?`<h5 class="afo">Otras fotos</h5>${actaFotosG(o)}`:'');
+};
 const actaFirmas=()=>`<div class="afi"><div><i></i>Elaborado por</div><div><i></i>Revisado por</div><div><i></i>Recibido por</div></div>`;
 
 function actaPreventivo(){
-  const regs=pcPrev().filter(r=>!F.ruta||r.ruta===F.ruta).sort((a,b)=>(a.fecha+a.hora).localeCompare(b.fecha+b.hora));
+  const [dA,hA]=ACTA_R||calcRango();
+  const regs=pcPrev().filter(r=>(!F.ruta||r.ruta===F.ruta)&&r.fecha>=dA&&r.fecha<=hA).sort((a,b)=>(a.fecha+a.hora).localeCompare(b.fecha+b.hora));
   const G={},I={},C={};let conTrabajo=0,lavados=0,puntaje=0,items=0;
   const fichas=regs.map(r=>{
     const hechos=[],cambios=[];
@@ -1087,7 +1102,7 @@ function actaPreventivo(){
 }
 
 function actaCorrectivo(){
-  const [desde,hasta]=calcRango();
+  const [desde,hasta]=ACTA_R||calcRango();
   const hechos=pcCorr().filter(x=>(!F.ruta||x.ruta===F.ruta)&&x.k==='hecho'&&x.fc&&x.fc>=desde&&x.fc<=hasta);
   const nopudo=pcCorr().filter(x=>(!F.ruta||x.ruta===F.ruta)&&x.k==='nopudo'&&x.fc&&x.fc>=desde&&x.fc<=hasta);
   const porCont=new Map();
@@ -1131,10 +1146,16 @@ function actaCorrectivo(){
 
 function abrirActa(){
   if(!PC){toast('Espera a que carguen los datos');return;}
-  const html=PC.modo==='prev'?actaPreventivo():actaCorrectivo();
+  // Una acta por cada día con trabajo realizado
+  const dias=actaDias();
+  if(!dias.length){toast('No hay trabajo realizado en el periodo elegido');return;}
+  const html=dias.map((d,i)=>{ACTA_R=[d,d];const h=PC.modo==='prev'?actaPreventivo():actaCorrectivo();
+    return `<div class="adia${i?' pb':''}">${h}</div>`;}).join('');
+  ACTA_R=null;
   let ov=$('#actaOv');
   if(!ov){ov=document.createElement('div');ov.id='actaOv';document.body.appendChild(ov);}
-  ov.innerHTML=`<div class="abar"><b>${PC.modo==='prev'?'Acta de preventivo':'Acta de correctivo'}</b><span></span><button class="btn" id="actaPrint">Imprimir / Guardar PDF</button><button class="btn" id="actaX">Cerrar</button></div><div class="adoc" id="actaDoc">${html}</div>`;
+  ov.innerHTML=`<div class="abar"><b>${PC.modo==='prev'?'Acta de preventivo':'Acta de correctivo'}${dias.length>1?` · ${dias.length} días`:''}</b><span></span><button class="btn" id="actaDrive">Guardar en Drive</button><button class="btn" id="actaPrint">Imprimir / Guardar PDF</button><button class="btn" id="actaX">Cerrar</button></div><div class="adoc" id="actaDoc">${html}</div>`;
+  $('#actaDrive').onclick=()=>actaADrive(dias);
   ov.classList.add('show');document.body.classList.add('con-acta');ov.scrollTop=0;
   $('#actaX').onclick=()=>{ov.classList.remove('show');document.body.classList.remove('con-acta');};
   $('#actaPrint').onclick=()=>{
@@ -1146,6 +1167,37 @@ function abrirActa(){
   };
 }
 
+/* Días del periodo con trabajo realizado (preventivo: fecha del registro;
+   correctivo: fecha de la corrección) */
+function actaDias(){
+  const [d,h]=calcRango(),set=new Set();
+  if(PC.modo==='prev')pcPrev().forEach(r=>{if((!F.ruta||r.ruta===F.ruta)&&r.fecha>=d&&r.fecha<=h)set.add(r.fecha);});
+  else pcCorr().forEach(x=>{if((!F.ruta||x.ruta===F.ruta)&&(x.k==='hecho'||x.k==='nopudo')&&x.fc&&x.fc>=d&&x.fc<=h)set.add(x.fc);});
+  return [...set].sort();
+}
+/* El servidor arma el PDF de cada día (con las fotos adentro) y lo guarda en
+   Drive, carpeta «GLOBECO · Actas diarias / CIUDAD». Cada noche se guardan
+   solas las del día. */
+async function actaADrive(dias){
+  const b=$('#actaDrive');if(!b||b.disabled)return;
+  b.disabled=true;const hechos=[];
+  try{
+    for(let i=0;i<dias.length;i++){
+      b.textContent=`Guardando ${i+1} de ${dias.length}…`;
+      const r=await api({action:'sv_acta_pdf',modo:PC.modo,ciudad:F.ciudad,ruta:F.ruta||'',fecha:dias[i]},180000);
+      if(!r||!r.ok)throw new Error((r&&r.error)||'error');
+      if(r.url)hechos.push([dias[i],r.url,r.carpeta]);
+    }
+    b.textContent='Guardado en Drive ✓';
+    const lista=$('#actaOv .abar span');
+    if(lista&&hechos.length)lista.innerHTML=hechos.map(([d,u])=>`<a href="${esc(u)}" target="_blank" rel="noopener">${esc(corta(d))}</a>`).join(' · ')+
+      (hechos[0][2]?` · <a href="${esc(hechos[0][2])}" target="_blank" rel="noopener">Carpeta</a>`:'');
+    toast(hechos.length===1?'Acta guardada en Drive':`${hechos.length} actas guardadas en Drive`);
+  }catch(e){
+    b.disabled=false;b.textContent='Guardar en Drive';
+    toast('No se pudo guardar en Drive: '+esc(String(e.message||e)));
+  }
+}
 document.addEventListener('click',e=>{if(e.target.closest('#btnActa'))abrirActa();});
 
 /* ─────────── Preventivo ─────────── */
