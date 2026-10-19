@@ -1043,8 +1043,9 @@ function actaPreventivo(){
     const hechos=[],cambios=[];
     r.it.forEach(([n,s])=>{
       const item=actaItem(n),grupo=actaGrupo(n);
-      if(/^aj/i.test(s)||/^se hizo/i.test(s)){hechos.push([grupo,item,/^se hizo/i.test(s)?'Se hizo':'Ajuste']);}
-      else if(/^cambio/i.test(s))cambios.push([grupo,item,cantDe(s)]);
+      // un punto puede venir «Ajuste + Cambio»: cuenta en los dos lados
+      if(/ajuste/i.test(s)||/^se hizo/i.test(s))hechos.push([grupo,item,/^se hizo/i.test(s)?'Se hizo':'Ajuste']);
+      if(/cambio/i.test(s))cambios.push([grupo,item,cantDe(s)]);
     });
     // un mismo ítem no cuenta dos veces en el mismo contenedor (lavado viejo eran 3 puntos)
     const vistos=new Set(),hU=hechos.filter(h=>{const k=h[1];if(vistos.has(k))return false;vistos.add(k);return true;});
@@ -1156,7 +1157,7 @@ function vPrev(){
   const hall=regs.filter(r=>r.tc||r.ta||r.sin);
   const sin=regs.filter(r=>r.sin);
   let itT=0,itH=0,itN=0;regs.forEach(r=>{if(r.av){itT+=r.av[0];itH+=r.av[1];itN+=r.av[2];}});
-  const cnt={};regs.forEach(r=>r.it.forEach(([n,s])=>{const k=n;(cnt[k]=cnt[k]||{a:0,c:0});/^aj/i.test(s)?cnt[k].a++:cnt[k].c++;}));
+  const cnt={};regs.forEach(r=>r.it.forEach(([n,s])=>{const k=n;(cnt[k]=cnt[k]||{a:0,c:0});if(/ajuste|se hizo/i.test(s))cnt[k].a++;if(/cambio/i.test(s))cnt[k].c++;}));
   const top=Object.entries(cnt).map(([n,v])=>[n,v.a+v.c,v.c>=v.a?'var(--c1)':'var(--aj)']).sort((a,b)=>b[1]-a[1]).slice(0,10);
   main.innerHTML=`
   ${cab('P','Preven<em>tivo</em>','Revisión preventiva por contenedor. El lavado y los ajustes se hacen en sitio; lo que necesita Cambio pasa al correctivo.')}
@@ -1230,7 +1231,7 @@ function detallePrev(id){
       <div><span>GPS</span><b>${r.lat!=null?(r.acc!=null?'± '+r.acc+' m':'Sí'):'Sin ubicación'}</b></div>
       <div><span>Correctivo</span><b>${r.av?`${r.av[1]} de ${r.av[0]} corregidos`:'Sin ítems'}</b></div>
     </div>
-    <div class="pz">${r.it.length?'<div class="g">Hallazgos</div>'+r.it.map(([n,s])=>`<div class="p"><span>${esc(n)}</span>${/^aj/i.test(s)?'<span class="tag a"><i></i>Ajuste</span>':`<span class="tag c"><i></i>${esc(s)}</span>`}</div>`).join(''):'<div class="g">Puntos</div><div class="p"><span>Todos los puntos revisados</span><span class="tag ok"><i></i>OK</span></div>'}
+    <div class="pz">${r.it.length?'<div class="g">Hallazgos</div>'+r.it.map(([n,s])=>`<div class="p"><span>${esc(n)}</span><span style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">${/ajuste/i.test(s)?'<span class="tag a"><i></i>Ajuste</span>':''}${/^se hizo/i.test(s)?'<span class="tag ok"><i></i>Se hizo</span>':''}${/cambio/i.test(s)?`<span class="tag c"><i></i>${esc((s.match(/cambio.*/i)||[s])[0])}</span>`:''}</span></div>`).join(''):'<div class="g">Puntos</div><div class="p"><span>Todos los puntos revisados</span><span class="tag ok"><i></i>OK</span></div>'}
       ${r.sin?`<div class="p"><span>Siniestrado</span><span class="tag x"><i></i>${esc(r.sin)}</span></div>`:''}</div>
     ${r.obs?`<div class="rev" style="background:var(--s2)"><div class="eyebrow" style="margin-bottom:6px">Observaciones</div><div style="font-size:14px;line-height:1.55">${esc(r.obs)}</div></div>`:''}
     ${r.fotos.length?actaFotos(r.fotos):''}
