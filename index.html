@@ -840,6 +840,7 @@ function pantallaError(code){
    PESTAÑAS
    ===================================================================== */
 const I={
+  resumen:'<rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>',
   vivo:'<path d="M3 12h4l3-8 4 16 3-8h4"/>',
   mapa:'<path d="M9 3 3 6v15l6-3 6 3 6-3V3l-6 3-6-3zM9 3v15M15 6v15"/>',
   equipo:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M18 14.5a6 6 0 0 1 3.5 5.5"/>',
@@ -851,14 +852,15 @@ const I={
 };
 const TABS=[['vivo','En vivo','Vivo'],['mapa','Mapa','Mapa'],['equipo','Equipo','Equipo'],['rutas','Rutas','Rutas'],['tiempos','Tiempos','Tiempo'],['piezas','Necesidades','Repuestos'],['registros','Registros','Lista'],['alertas','Alertas','Alertas']];
 function pintarTabs(){
-  $('#tabs').innerHTML=TABS.map(([k,t,ts])=>{
-    const n=k==='alertas'&&X&&X.alertasN?`<span class="n">${X.alertasN>99?'99+':X.alertasN}</span>`:'';
-    return `<button class="tab${TAB===k?' on':''}" data-t="${k}" ${TAB===k?'aria-current="page"':''}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${I[k]}</svg><span class="tl">${t}</span><span class="ts">${ts}</span>${n}</button>`;
+  const pcm=typeof MODO_SV!=='undefined'&&MODO_SV!=='mant',lista=pcm?(TABS_PC[MODO_SV]||[]):TABS,act=pcm?PCTAB:TAB;
+  $('#tabs').innerHTML=lista.map(([k,t,ts])=>{
+    const n=!pcm&&k==='alertas'&&X&&X.alertasN?`<span class="n">${X.alertasN>99?'99+':X.alertasN}</span>`:'';
+    return `<button class="tab${act===k?' on':''}" data-t="${k}" ${act===k?'aria-current="page"':''}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${I[k]}</svg><span class="tl">${t}</span><span class="ts">${ts}</span>${n}</button>`;
   }).join('');
   const on=$('#tabs .tab.on');if(on&&on.scrollIntoView&&innerWidth<760)on.scrollIntoView({inline:'center',block:'nearest'});
 }
 $('#tabs').onclick=e=>{const b=e.target.closest('.tab');if(!b)return;irA(b.dataset.t);};
-function irA(t,extra){TAB=t;LS.set('gs-sv-tab',t);pintarTabs();render(extra,false);window.scrollTo({top:0,behavior:REDUCE?'auto':'smooth'});}
+function irA(t,extra){if(MODO_SV!=='mant'){irPC(t);return;}TAB=t;LS.set('gs-sv-tab',t);pintarTabs();render(extra,false);window.scrollTo({top:0,behavior:REDUCE?'auto':'smooth'});}
 
 /* =====================================================================
    FILTROS
@@ -933,7 +935,9 @@ function pintarModos(){
   el.innerHTML=lista.map(([k,t])=>`<button class="${k===MODO_SV?'on':''}" data-m="${k}">${t}</button>`).join('');
   $('#modosWrap').style.display=lista.length>1?'':'none';
   const pc=MODO_SV!=='mant';
-  $('#tabs').parentElement.style.display=pc?'none':'';
+  $('#tabs').parentElement.style.display='';
+  if(pc&&!(TABS_PC[MODO_SV]||[]).some(t=>t[0]===PCTAB))PCTAB='resumen';
+  pintarTabs();
   $('#fPersona').style.display=pc?'none':'';
   document.querySelector('header h1').textContent=pc?(MODO_SV==='prev'?'Preventivo':'Correctivo'):'Supervisión';
 }
@@ -988,11 +992,14 @@ const dDias=(a,b)=>Math.round((Date.parse(b)-Date.parse(a))/864e5);
 function renderPC(primera){
   if(!PC)return;
   pintarModos();
-  const v=PC.modo==='prev'?vPrev:vCorr;
+  const V={resumen:PC.modo==='prev'?vPrev:vCorr,mapa:vPCMapa,equipo:vPCEquipo,rutas:vPCRutas,tiempos:vPCTiempos,piezas:vPCPiezas};
+  for(const k in CHS)delete CHS[k];
   destruirMapa();
-  v();
+  (V[PCTAB]||V.resumen)();
+  if(PC.modo==='prev'&&(PCTAB==='resumen'||!V[PCTAB])){const g=document.querySelector('#main .grid.g4');const html=cardGrafitis();if(g&&html)g.insertAdjacentHTML('afterend',html);}
   document.querySelectorAll('#main .rv').forEach((e,i)=>e.style.setProperty('--i',Math.min(i,10)));
   main.classList.toggle('anim',!!primera&&!REDUCE);
+  dibujar();
 }
 function mapaPC(puntos,nombres){
   if(typeof L==='undefined'||!$('#map'))return;
@@ -1018,7 +1025,7 @@ function mapaPC(puntos,nombres){
    cada GRUPO con al menos un trabajo en un contenedor suma 1 (lo más
    importante) y cada ÍTEM suma por separado. Al final va el informe de
    cada contenedor con todas sus fotos. Se imprime o se guarda en PDF. */
-const ACTA_GRUPOS_PREV=[["Lavado",["Lavado","Hidrolavado","Limpieza manual","Limpieza externa"]],["Ajuste de tapón",["Ajuste de tapón"]],["Sistema de apertura",["Tapa normal","Tapa buzón","Marco de tapa","Perno de tapa","Cable","Pedal","Soporte de pedal","Resorte de pedal","Amortiguador","Limitador"]],["Señalética · adhesivos",["Numeración","No estacionarse","Adhesivo lateral","Línea de centraje"]],["Verificación funcional",["Caucho de tapa","Perno autoperforante","Manilla","Triángulo lateral"]],["Rodillo de toma",["Rodillo de toma y arandela"]],["Rodillo anti tropiezo",["Rodillo anti tropiezo"]],["Restauración de pintura",["Grafitis","Retiro de óxido","Pintura"]],["Pernos, vinchas, bujes y remaches",["Pernos","Vinchas","Buje de tapa","Remaches"]]];
+const ACTA_GRUPOS_PREV=[["Lavado",["Lavado","Hidrolavado","Limpieza manual","Limpieza externa"]],["Ajuste de tapón",["Ajuste de tapón"]],["Sistema de apertura",["Tapa normal","Tapa buzón","Marco de tapa","Perno unión de amortiguador","Perno de tapa","Tirante con perno y clavija L1520mm","Cable","Pedal","Soporte de pedal","Resorte de equilibrado pedal","Resorte de pedal","Amortiguador de gas 480N","Amortiguador","Regleta limitadora","Limitador"]],["Señalética · adhesivos",["Numeración","Etiqueta adhesiva reflectiva No estacionar 20x20","No estacionarse","Etiqueta adhesiva reflectiva rojo blanco para señalización","Adhesivo lateral","Etiqueta adhesiva de operación color negro 69x5","Línea de centraje"]],["Verificación funcional",["Perfil de goma de tapa","Caucho de tapa","Manilla de goma","Manilla","Medias luna","Triángulo lateral","Perno autoperforante"]],["Rodillo de toma",["Rodillo de toma y arandela"]],["Rodillo anti tropiezo",["Rodillo anti tropiezo"]],["Restauración de pintura",["Grafitis","Golpes","Retiro de óxido","Pintura"]],["Pernos, vinchas, bujes y remaches",["Pernos","Vinchas","Buje de tapa","Remaches"]]];
 const ACTA_ORDEN=ACTA_GRUPOS_PREV.map(g=>g[0]);
 const ACTA_GRUPO_DE={};ACTA_GRUPOS_PREV.forEach(([g,its])=>its.forEach(i=>{ACTA_GRUPO_DE[normN(i)]=g;}));
 const actaGrupo=i=>ACTA_GRUPO_DE[normN(i)]||'Otros';
@@ -1059,8 +1066,8 @@ function actaPreventivo(){
     r.it.forEach(([n,s])=>{
       const item=actaItem(n),grupo=actaGrupo(n);
       // un punto puede venir «Ajuste + Cambio»: cuenta en los dos lados
-      if(/ajuste/i.test(s)||/^se hizo/i.test(s))hechos.push([grupo,item,/^se hizo/i.test(s)?'Se hizo':'Ajuste']);
-      if(/cambio/i.test(s))cambios.push([grupo,item,cantDe(s)]);
+      if(/ajuste|^se hizo|retirad|colocad/i.test(s))hechos.push([grupo,item,/^se hizo/i.test(s)?'Se hizo':/colocad/i.test(s)?'Colocado':/retirad/i.test(s)?'Retirado':'Ajuste']);
+      if(/cambio/i.test(s))cambios.push([grupo,nomRep(n),cantDe(s)]);
     });
     // un mismo ítem no cuenta dos veces en el mismo contenedor (lavado viejo eran 3 puntos)
     const vistos=new Set(),hU=hechos.filter(h=>{const k=h[1];if(vistos.has(k))return false;vistos.add(k);return true;});
@@ -1082,21 +1089,21 @@ function actaPreventivo(){
     <div class="ach"><div><span class="an">${n+1}</span><b>Contenedor ${esc(r.tacho)}</b></div><div class="ap">Puntaje <b>${grupos.length}</b> grupo${grupos.length===1?'':'s'} · <b>${hU.length}</b> ítem${hU.length===1?'':'s'}</div></div>
     <div class="ak sm"><div><span>Fecha</span><b>${esc(larga(r.fecha))} ${esc(r.hora)}</b></div><div><span>Ruta</span><b>${esc(r.ruta||'—')}</b></div>
       <div><span>Equipo</span><b>${esc(r.personas.join(' y ')||'—')}</b></div><div><span>Ubicación</span><b>${r.lat!=null?`<a href="https://www.google.com/maps?q=${r.lat},${r.lng}" target="_blank" rel="noopener">${(+r.lat).toFixed(6)}, ${(+r.lng).toFixed(6)}</a>`:'—'}</b></div></div>
-    <div class="acol"><div><h4>Preventivo realizado</h4>${hU.length?`<ul>${grupos.sort(ordGrupo).map(g=>{const its=hU.filter(h=>h[0]===g);return `<li><b>${esc(g)}</b>${its.length===1&&its[0][1]===g?' · '+esc(its[0][2]==='Ajuste'?'ajuste':'se hizo'):': '+its.map(h=>esc(h[1])+(h[2]==='Ajuste'?' (ajuste)':'')).join(', ')}</li>`;}).join('')}</ul>`:'<div class="vac">Sin trabajos de preventivo.</div>'}</div>
-      <div><h4>Para correctivo</h4>${cambios.length||r.sin?`<ul>${cambios.map(([g,i,q])=>`<li>${esc(i)} · cambio${q>1?' ×'+q:''}</li>`).join('')}${r.sin?`<li>Siniestrado: ${esc(r.sin)}</li>`:''}</ul>`:'<div class="vac">Nada pendiente.</div>'}</div></div>
+    <div class="acol"><div><h4>Preventivo realizado</h4>${hU.length?`<ul>${grupos.sort(ordGrupo).map(g=>{const its=hU.filter(h=>h[0]===g);return `<li><b>${esc(g)}</b>${its.length===1&&its[0][1]===g?' · '+esc(its[0][2]==='Ajuste'?'ajuste':'se hizo'):': '+its.map(h=>esc(h[1])+(h[2]==='Se hizo'?'':' ('+h[2].toLowerCase()+')')).join(', ')}</li>`;}).join('')}</ul>`:'<div class="vac">Sin trabajos de preventivo.</div>'}</div>
+      <div><h4>Requiere cambio · por aprobar</h4>${cambios.length||r.sin?`<ul>${cambios.map(([g,i,q])=>`<li>${esc(i)}${q>1?' ×'+q:''} · debe cambiarse</li>`).join('')}${r.sin?`<li>Siniestrado: ${esc(r.sin)}</li>`:''}</ul>`:'<div class="vac">Nada pendiente.</div>'}</div></div>
     ${r.obs?`<p class="ao"><b>Observaciones:</b> ${esc(r.obs)}</p>`:''}
     ${actaFotos(r.fotos)}
   </section>`).join('');
-  return actaCabecera('Acta de mantenimiento preventivo','Ajustes y lavado realizados en sitio. Los cambios de pieza se derivan al correctivo.')+`
+  return actaCabecera('Acta de mantenimiento preventivo','Lavado, ajustes, colocados y retiro de grafitis hechos en sitio. Los cambios de repuesto quedan pendientes de aprobación del Administrador del Contrato.')+`
   <div class="ar">
     <div><span>Contenedores</span><b>${fmt(regs.length)}</b><small>${fmt(conTrabajo)} con preventivo</small></div>
     <div class="hi"><span>Puntaje por grupos</span><b>${fmt(puntaje)}</b><small>1 punto por grupo trabajado</small></div>
     <div><span>Ítems realizados</span><b>${fmt(items)}</b><small>${fmt(lavados)} lavados</small></div>
-    <div><span>Al correctivo</span><b>${fmt(totC)}</b><small>piezas a cambiar${sin.length?' · '+sin.length+' siniestrado'+(sin.length>1?'s':''):''}</small></div>
+    <div><span>Requiere cambio</span><b>${fmt(totC)}</b><small>piezas por aprobar${sin.length?' · '+sin.length+' siniestrado'+(sin.length>1?'s':''):''}</small></div>
   </div>
   <h2>1. Puntaje por grupo</h2>${actaTabla(['Grupo','Puntaje (contenedores)','Ítems'],gFil,['Total',`<b>${fmt(puntaje)}</b>`,fmt(items)])}
   <h2>2. Ítems realizados</h2>${actaTabla(['Ítem','Grupo','Cantidad'],iFil,['Total','',`<b>${fmt(items)}</b>`],2)}
-  <h2>3. Derivado al correctivo</h2>${actaTabla(['Ítem','Grupo','Contenedores','Piezas'],cFil,cFil.length?['Total','','',`<b>${fmt(totC)}</b>`]:null,2)}
+  <h2>3. Requiere cambio · pendiente de aprobación del Administrador del Contrato</h2>${actaTabla(['Ítem','Grupo','Contenedores','Piezas'],cFil,cFil.length?['Total','','',`<b>${fmt(totC)}</b>`]:null,2)}
   ${actaFirmas()}
   <h2 class="pb">4. Informe por contenedor</h2>${anexo||'<div class="vac">Sin preventivos en el periodo.</div>'}`;
 }
@@ -1186,13 +1193,13 @@ async function actaADrive(dias){
       b.textContent=`Guardando ${i+1} de ${dias.length}…`;
       const r=await api({action:'sv_acta_pdf',modo:PC.modo,ciudad:F.ciudad,ruta:F.ruta||'',fecha:dias[i]},180000);
       if(!r||!r.ok)throw new Error((r&&r.error)||'error');
-      if(r.url)hechos.push([dias[i],r.url,r.carpeta]);
+      hechos.push([dias[i],r.url||'',r.carpeta||'']);
     }
-    b.textContent='Guardado en Drive ✓';
-    const lista=$('#actaOv .abar span');
-    if(lista&&hechos.length)lista.innerHTML=hechos.map(([d,u])=>`<a href="${esc(u)}" target="_blank" rel="noopener">${esc(corta(d))}</a>`).join(' · ')+
-      (hechos[0][2]?` · <a href="${esc(hechos[0][2])}" target="_blank" rel="noopener">Carpeta</a>`:'');
-    toast(hechos.length===1?'Acta guardada en Drive':`${hechos.length} actas guardadas en Drive`);
+    b.textContent=hechos.some(h=>h[1])?'Guardado en Drive ✓':'Enviado a Drive ✓';
+    const lista=$('#actaOv .abar span'),carp=(hechos.find(h=>h[2])||[])[2];
+    if(lista)lista.innerHTML=hechos.filter(h=>h[1]).map(([d,u])=>`<a href="${esc(u)}" target="_blank" rel="noopener">${esc(corta(d))}</a>`).join(' · ')+
+      (carp?`${hechos.some(h=>h[1])?' · ':''}<a href="${esc(carp)}" target="_blank" rel="noopener">Abrir carpeta</a>`:'');
+    toast(hechos.some(h=>h[1])?(hechos.length===1?'Informe guardado en Drive':`${hechos.length} informes guardados en Drive`):`${hechos.length===1?'El informe':'Los '+hechos.length+' informes'} se están armando en PDF: aparecen en la carpeta de Drive en unos minutos`);
   }catch(e){
     b.disabled=false;b.textContent='Guardar en Drive';
     toast('No se pudo guardar en Drive: '+esc(String(e.message||e)));
@@ -1209,10 +1216,10 @@ function vPrev(){
   const hall=regs.filter(r=>r.tc||r.ta||r.sin);
   const sin=regs.filter(r=>r.sin);
   let itT=0,itH=0,itN=0;regs.forEach(r=>{if(r.av){itT+=r.av[0];itH+=r.av[1];itN+=r.av[2];}});
-  const cnt={};regs.forEach(r=>r.it.forEach(([n,s])=>{const k=n;(cnt[k]=cnt[k]||{a:0,c:0});if(/ajuste|se hizo/i.test(s))cnt[k].a++;if(/cambio/i.test(s))cnt[k].c++;}));
+  const cnt={};regs.forEach(r=>r.it.forEach(([n,s])=>{const k=n;(cnt[k]=cnt[k]||{a:0,c:0});if(/ajuste|se hizo|retirad|colocad/i.test(s))cnt[k].a++;if(/cambio/i.test(s))cnt[k].c++;}));
   const top=Object.entries(cnt).map(([n,v])=>[n,v.a+v.c,v.c>=v.a?'var(--c1)':'var(--aj)']).sort((a,b)=>b[1]-a[1]).slice(0,10);
   main.innerHTML=`
-  ${cab('P','Preven<em>tivo</em>','Revisión preventiva por contenedor. El lavado y los ajustes se hacen en sitio; lo que necesita Cambio pasa al correctivo.')}
+  ${cab('P','Preven<em>tivo</em>','Revisión preventiva por contenedor. El lavado, los ajustes y lo colocado se hacen en sitio; lo que necesita cambio queda por aprobar y pasa al correctivo.')}
   <div class="grid g4">
     ${stat('Preventivos',fmt(regs.length),plural(tachos.size,'contenedor','contenedores')+(geoN?` · ${Math.round(tachos.size/geoN*100)}% de ${fmt(geoN)}`:''))}
     ${stat('Con hallazgos',fmt(hall.length),regs.length?Math.round(hall.length/regs.length*100)+'% de los revisados':'—')}
@@ -1283,7 +1290,7 @@ function detallePrev(id){
       <div><span>GPS</span><b>${r.lat!=null?(r.acc!=null?'± '+r.acc+' m':'Sí'):'Sin ubicación'}</b></div>
       <div><span>Correctivo</span><b>${r.av?`${r.av[1]} de ${r.av[0]} corregidos`:'Sin ítems'}</b></div>
     </div>
-    <div class="pz">${r.it.length?'<div class="g">Hallazgos</div>'+r.it.map(([n,s])=>`<div class="p"><span>${esc(n)}</span><span style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">${/ajuste/i.test(s)?'<span class="tag a"><i></i>Ajuste</span>':''}${/^se hizo/i.test(s)?'<span class="tag ok"><i></i>Se hizo</span>':''}${/cambio/i.test(s)?`<span class="tag c"><i></i>${esc((s.match(/cambio.*/i)||[s])[0])}</span>`:''}</span></div>`).join(''):'<div class="g">Puntos</div><div class="p"><span>Todos los puntos revisados</span><span class="tag ok"><i></i>OK</span></div>'}
+    <div class="pz">${r.it.length?'<div class="g">Hallazgos</div>'+r.it.map(([n,s])=>`<div class="p"><span>${esc(n)}</span><span style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">${/ajuste/i.test(s)?'<span class="tag a"><i></i>Ajuste</span>':''}${/^se hizo/i.test(s)?'<span class="tag ok"><i></i>Se hizo</span>':''}${/colocad/i.test(s)?'<span class="tag a"><i></i>Colocado</span>':''}${/retirad/i.test(s)?'<span class="tag ok"><i></i>Retirado</span>':''}${/cambio/i.test(s)?`<span class="tag c"><i></i>${esc((s.match(/cambio.*/i)||[s])[0])}</span>`:''}</span></div>`).join(''):'<div class="g">Puntos</div><div class="p"><span>Todos los puntos revisados</span><span class="tag ok"><i></i>OK</span></div>'}
       ${r.sin?`<div class="p"><span>Siniestrado</span><span class="tag x"><i></i>${esc(r.sin)}</span></div>`:''}</div>
     ${r.obs?`<div class="rev" style="background:var(--s2)"><div class="eyebrow" style="margin-bottom:6px">Observaciones</div><div style="font-size:14px;line-height:1.55">${esc(r.obs)}</div></div>`:''}
     ${r.fotos.length?actaFotos(r.fotos):''}
@@ -1381,6 +1388,193 @@ function detalleCorr(id){
     ${x.fotos.length?actaFotos(x.fotos):''}
     <div class="acts" style="margin-top:14px">${maps?`<a class="btn" href="${maps}" target="_blank" rel="noopener">Abrir en Google Maps</a>`:''}</div>`;
   $('#modal').classList.add('show');$('#sheet').scrollTop=0;
+}
+
+
+/* ─────────── Pestañas de preventivo y correctivo ───────────
+   Las mismas formas de mirar que en Levantamiento: resumen, mapa con
+   varios colores, equipos, rutas, tiempos y repuestos. */
+const TABS_PC={
+  prev:[['resumen','Resumen','Resumen'],['mapa','Mapa','Mapa'],['equipo','Equipo','Equipo'],['rutas','Rutas','Rutas'],['tiempos','Tiempos','Tiempo'],['piezas','Requerimientos','Repuestos']],
+  corr:[['resumen','Resumen','Resumen'],['mapa','Mapa','Mapa'],['equipo','Equipo','Equipo'],['rutas','Rutas','Rutas'],['tiempos','Tiempos','Tiempo'],['piezas','Repuestos','Repuestos']]
+};
+let PCTAB=LS.get('gs-sv-pctab','resumen'),PCMAPA=LS.get('gs-sv-pcmapa','estado');
+/* Repuestos del contrato 028-LOSNCP-DJ-2026 (número, nombre, precio unitario) */
+const REP28=[null,['Tapón de descarga completo',6.4135],['Rodillo anti tropiezo',7.62],['Etiqueta adhesiva reflectiva rojo blanco para señalización',6.0706],['Etiqueta adhesiva reflectiva No estacionar 20x20',5.207],['Etiqueta adhesiva de operación color negro 69x5',6.0706],['Perfil de goma de tapa',9.4615],['Manilla de goma',3.556],['Amortiguador de gas',17.018],['Rodillo de toma',7.62],['Perno unión de amortiguador',0.2286],['Regleta limitadora',8.8265],['Tirante con perno y clavija L1520mm',7.62],['Resorte de equilibrado pedal',15.24],['Tapa completa del contenedor pintada del color del contenedor',123.825],['Tapa completa del contenedor pintada en azul con buzón',123.825],['Medias luna lámina 3.2 pintada del contenedor',31.115],['Pedal (3200 litros)',33.02],['Enderezada de golpes en el contenedor',250]];
+const NUM28={ajustedetapon:1,tapon:1,rodilloantitropiezo:2,etiquetaadhesivareflectivarojoblancoparasenalizacion:3,adhesivolateral:3,etiquetaadhesivareflectivanoestacionar20x20:4,noestacionarse:4,etiquetaadhesivadeoperacioncolornegro69x5:5,lineadecentraje:5,perfildegomadetapa:6,cauchodetapa:6,cauchodetapas:6,manilladegoma:7,manilla:7,amortiguadordegas480n:8,amortiguador:8,rodillodetomayarandela:9,rodillodetoma:9,pernouniondeamortiguador:10,pernodetapa:10,pernoautoperforante:10,regletalimitadora:11,limitador:11,limitadoramortiguador:11,tiranteconpernoyclavijal1520mm:12,cable:12,cables:12,resortedeequilibradopedal:13,resortedepedal:13,tapanormal:14,tapacontenedor:14,tapabuzon:15,mediasluna:16,triangulolateral:16,pedal:17,golpes:18};
+const k28=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]/g,'');
+function num28(n){const m=String(n||'').trim().match(/^(\d{1,2})\.\s/);return m?+m[1]:(NUM28[k28(n)]||0);}
+const rep28=n=>n+'. '+REP28[n][0];
+const nomRep=i=>{const n=num28(i);return n?rep28(n):String(i||'');};
+const dinero=v=>'$ '+(Math.round(v*100)/100).toLocaleString('es-EC',{minimumFractionDigits:2,maximumFractionDigits:2});
+const minDeH=h=>{const m=String(h||'').match(/(\d{1,2}):(\d{2})/);return m?+m[1]*60+ +m[2]:null;};
+
+function irPC(t){PCTAB=t;LS.set('gs-sv-pctab',t);pintarTabs();renderPC(true);window.scrollTo({top:0,behavior:REDUCE?'auto':'smooth'});}
+
+/* Registros del periodo y la ruta elegidos */
+function pcRegs(){return pcPrev().filter(r=>!F.ruta||r.ruta===F.ruta);}
+function pcIts(){return pcCorr().filter(x=>!F.ruta||x.ruta===F.ruta);}
+function pcHechos(){const [d,h]=calcRango();return pcIts().filter(x=>(x.k==='hecho'||x.k==='nopudo')&&x.fc&&x.fc>=d&&x.fc<=h);}
+
+/* ── Mapa ── */
+function vPCMapa(){
+  const prev=PC.modo==='prev';
+  const modos=prev?[['estado','Resultado'],['ruta','Ruta'],['equipo','Equipo'],['vigencia','Vigencia']]:[['estado','Estado'],['ruta','Ruta'],['antig','Antigüedad']];
+  if(!modos.some(m=>m[0]===PCMAPA))PCMAPA='estado';
+  main.innerHTML=`${cab('M','Ma<em>pa</em>',prev?'Cada contenedor del periodo con el color que elijas: resultado del preventivo, ruta, equipo o días desde su último preventivo.':'Cada contenedor con ítems de correctivo: su estado, su ruta o cuántos días lleva esperando.')}
+  <div class="tools rv"><div class="seg" id="mModoPC">${modos.map(([k,t])=>`<button class="${PCMAPA===k?'on':''}" data-m="${k}">${t}</button>`).join('')}</div></div>
+  <div class="card rv" style="padding:0;overflow:hidden"><div class="mapwrap" style="height:min(76vh,760px);min-height:420px;border:0;border-radius:0"><div id="map"></div><div class="pcleg" id="pcLeg"></div></div></div>`;
+  $('#mModoPC').onclick=e=>{const b=e.target.closest('button');if(!b)return;PCMAPA=b.dataset.m;LS.set('gs-sv-pcmapa',PCMAPA);renderPC(false);};
+  const pts=[],ley=new Map();
+  const add=(t,c)=>{const x=ley.get(t);if(x)x[2]++;else ley.set(t,[t,c,1]);};
+  if(prev){
+    const regs=pcRegs(),ult={};regs.forEach(r=>{if(!ult[r.tacho]||(r.fecha+r.hora)>(ult[r.tacho].fecha+ult[r.tacho].hora))ult[r.tacho]=r;});
+    const colR=r=>r.sin?['Siniestrado','#E5484D']:r.tc?['Requiere cambio','#378ADD']:r.ta?['Ajustes / colocados','#C98500']:['Todo OK','#1D9E75'];
+    const hoy=hoyISO();
+    const colV=d=>d==null?['Sin preventivo en el periodo',css('--pend')||'#4A6076']:d<=7?['Hace 0–7 días','#1D9E75']:d<=15?['Hace 8–15 días','#C98500']:['Hace más de 15 días','#E5484D'];
+    const pinta=(r,g)=>{
+      let c;
+      if(PCMAPA==='ruta'){const ru=(r&&r.ruta)||(g&&g.ruta)||'SIN RUTA';c=[ru,rutaColor(ru)];}
+      else if(PCMAPA==='equipo'){const eq=r?r.personas.join(' y ')||'Sin equipo':'Sin preventivo';c=[eq,r?personaColor(r.personas[0]||eq):(css('--pend')||'#4A6076')];}
+      else if(PCMAPA==='vigencia')c=colV(r?dDias(r.fecha,hoy):null);
+      else c=r?colR(r):['Sin revisar',css('--pend')||'#4A6076'];
+      add(c[0],c[1]);return c[1];
+    };
+    GEO.forEach(g=>{if(F.ruta&&g.ruta!==F.ruta)return;const r=ult[g.num];
+      pts.push({lat:r&&r.lat!=null?r.lat:g.lat,lng:r&&r.lng!=null?r.lng:g.lng,c:pinta(r,g),hueco:!r,pop:()=>r?popPrev(r):`<h4>${esc(g.num)}</h4>${rutaTag(g.ruta)}<div style="margin-top:6px;color:var(--ink2)">Sin preventivo en este periodo.</div>`});});
+    Object.values(ult).forEach(r=>{if(!GEO.has(r.tacho)&&r.lat!=null)pts.push({lat:r.lat,lng:r.lng,c:pinta(r,null),pop:()=>popPrev(r)});});
+  }else{
+    const its=pcIts(),por=new Map();its.forEach(x=>{if(!por.has(x.tacho))por.set(x.tacho,[]);por.get(x.tacho).push(x);});
+    por.forEach((l,t)=>{
+      const g=GEO.get(t),cc=l.find(x=>x.lat!=null),pend=l.filter(x=>x.k==='pend');
+      let c;
+      if(PCMAPA==='ruta'){const ru=(g&&g.ruta)||l[0].ruta||'SIN RUTA';c=[ru,rutaColor(ru)];}
+      else if(PCMAPA==='antig'){const d=pend.length?Math.max(...pend.map(x=>x.fp?diasDesde(x.fp):0)):null;
+        c=d==null?['Sin pendientes','#1D9E75']:d<=3?['Pendiente 0–3 días','#C98500']:d<=7?['Pendiente 4–7 días','#D95926']:['Pendiente más de 7 días','#E5484D'];}
+      else{const k=pend.length?'pend':l.some(x=>x.k==='nopudo')?'nopudo':'hecho';c={pend:['Con pendientes','#E5484D'],nopudo:['No se pudo','#E8A31C'],hecho:['Todo corregido','#1D9E75']}[k];}
+      add(c[0],c[1]);
+      pts.push({lat:g&&g.lat!=null?g.lat:cc?cc.lat:null,lng:g&&g.lng!=null?g.lng:cc?cc.lng:null,c:c[1],pop:()=>popCorr(t,l)});
+    });
+  }
+  mapaPC(pts,[...ley.values()].sort((a,b)=>b[2]-a[2]).slice(0,14).map(([t,c,n])=>[t,c,n]));
+}
+
+/* ── Equipo ── */
+function vPCEquipo(){
+  const prev=PC.modo==='prev',[d,h]=calcRango(),unDia=d===h,meta=(S&&S.cfg&&S.cfg.metaEquipo)||0;
+  const E=new Map();
+  if(prev){
+    pcRegs().forEach(r=>{const k=r.personas.join(' y ')||'Sin equipo';let e=E.get(k);
+      if(!e){e={nombre:k,personas:r.personas,n:0,tachos:new Set(),dias:new Map(),tc:0,ta:0,sin:0,hall:0};E.set(k,e);}
+      e.n++;e.tachos.add(r.tacho);e.tc+=r.tc||0;e.ta+=r.ta||0;if(r.sin)e.sin++;if(r.tc||r.ta||r.sin)e.hall++;
+      const m=minDeH(r.hora);const j=e.dias.get(r.fecha)||{n:0,a:null,b:null};j.n++;if(m!=null){j.a=j.a==null?m:Math.min(j.a,m);j.b=j.b==null?m:Math.max(j.b,m);}e.dias.set(r.fecha,j);});
+  }else{
+    pcHechos().forEach(x=>{const ps=String(x.rc||'').split(/\s*[\/,]\s*|\s+y\s+/).map(s=>s.trim()).filter(Boolean);const k=x.rc||'Sin responsables';let e=E.get(k);
+      if(!e){e={nombre:k,personas:ps,n:0,tachos:new Set(),dias:new Map(),q:0,nop:0,valor:0};E.set(k,e);}
+      if(x.k==='hecho'){e.n++;e.q+=x.cant||1;const n=num28(x.item);if(n)e.valor+=(x.cant||1)*REP28[n][1];}else e.nop++;
+      e.tachos.add(x.tacho);const m=minDeH(x.hc);const j=e.dias.get(x.fc)||{n:0,a:null,b:null};j.n++;if(m!=null){j.a=j.a==null?m:Math.min(j.a,m);j.b=j.b==null?m:Math.max(j.b,m);}e.dias.set(x.fc,j);});
+  }
+  const eqs=[...E.values()].sort((a,b)=>b.tachos.size-a.tachos.size);
+  const ritmo=e=>{let t=0,c=0;e.dias.forEach(j=>{if(j.a!=null&&j.n>1){t+=j.b-j.a;c+=j.n-1;}});return c?t/c:null;};
+  const durTx=m=>m==null?'—':m>=60?Math.floor(m/60)+' h '+String(Math.round(m%60)).padStart(2,'0')+' min':Math.round(m)+' min';
+  const hhmm=m=>m==null?'—':String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0');
+  main.innerHTML=`${cab('E','Equi<em>po</em>',prev?'Cada pareja de técnicos del preventivo: contenedores atendidos, hallazgos y ritmo.':'Cada equipo del correctivo: ítems corregidos, piezas instaladas y su valor según el contrato.')}
+  <div class="crews">${eqs.map(e=>{
+    const n=e.tachos.size,p=unDia&&meta?Math.min(100,pct(n,meta)):null,j=unDia?e.dias.get(d):null,r=ritmo(e);
+    return `<div class="card team rv"><div class="hd">${avatar(e.personas.length?e.personas:[e.nombre],1)}<div class="nm">${esc(e.nombre)}<small>${j&&j.a!=null?`${hhmm(j.a)} → ${hhmm(j.b)} · ${durTx(j.b-j.a)}`:plural(e.dias.size,'día')+' de trabajo'}</small></div></div>
+      <div><div class="num"><b>${cu(n)}</b><span>contenedores${p!=null?` de ${meta}`:''}</span></div>${p!=null?`<div class="meter" style="margin-top:10px"><i style="width:${p}%"></i></div>`:''}</div>
+      ${prev?`<div class="tri"><div><b>${fmt(e.tc)}</b><span>Cambios pedidos</span></div><div><b>${fmt(e.ta)}</b><span>Ajustes</span></div><div><b>${r!=null?Math.round(r):'—'}</b><span>Min / cont.</span></div></div>`
+        :`<div class="tri"><div><b>${fmt(e.q)}</b><span>Piezas</span></div><div><b>${fmt(e.nop)}</b><span>No se pudo</span></div><div><b>${dinero(e.valor)}</b><span>Valor</span></div></div>`}
+      <div class="acts"><button class="btn" onclick="PCQ='${jsq(e.personas[0]||e.nombre)}';PCF='todos';irPC('resumen')">Ver registros</button></div></div>`;}).join('')||'<div class="card empty">Sin trabajo en este periodo.</div>'}</div>
+  <div class="card mt rv"><div class="lab"><h3>Por equipo</h3></div><div class="scroll-x"><table class="tbl"><thead><tr><th>Equipo</th><th class="r">Contenedores</th>${prev?'<th class="r">Preventivos</th><th class="r">Con hallazgos</th><th class="r">Cambios pedidos</th><th class="r">Ajustes</th><th class="r">Siniestros</th>':'<th class="r">Ítems corregidos</th><th class="r">Piezas</th><th class="r">No se pudo</th><th class="r">Valor</th>'}<th class="r">Días</th></tr></thead>
+    <tbody>${eqs.map(e=>`<tr style="cursor:default"><td><b style="font-weight:600">${esc(e.nombre)}</b></td><td class="r">${fmt(e.tachos.size)}</td>${prev?`<td class="r">${fmt(e.n)}</td><td class="r">${fmt(e.hall)}</td><td class="r">${fmt(e.tc)}</td><td class="r">${fmt(e.ta)}</td><td class="r">${fmt(e.sin)}</td>`:`<td class="r">${fmt(e.n)}</td><td class="r">${fmt(e.q)}</td><td class="r">${fmt(e.nop)}</td><td class="r">${dinero(e.valor)}</td>`}<td class="r">${e.dias.size}</td></tr>`).join('')}</tbody></table></div></div>`;
+}
+
+/* ── Rutas ── */
+function vPCRutas(){
+  const prev=PC.modo==='prev',R=new Map();
+  const ruta=k=>{let r=R.get(k);if(!r){r={ruta:k,total:0,hechos:new Set(),regs:0,tc:0,ta:0,pend:0,corr:0,nop:0,cont:new Set()};R.set(k,r);}return r;};
+  GEO.forEach(g=>{if(F.ruta&&g.ruta!==F.ruta)return;ruta(g.ruta||'SIN RUTA').total++;});
+  if(prev)pcRegs().forEach(r=>{const x=ruta(r.ruta||'SIN RUTA');x.regs++;x.hechos.add(r.tacho);x.tc+=r.tc||0;x.ta+=r.ta||0;});
+  else{const [d,h]=calcRango();pcIts().forEach(i=>{const x=ruta(i.ruta||'SIN RUTA');x.cont.add(i.tacho);if(i.k==='pend')x.pend++;else if(i.k==='nopudo')x.nop++;else if(i.fc>=d&&i.fc<=h)x.corr++;});}
+  const rs=[...R.values()].filter(r=>prev?(r.total||r.regs):r.cont.size).sort((a,b)=>prev?(pct(b.hechos.size,b.total)-pct(a.hechos.size,a.total)):(b.pend-a.pend));
+  main.innerHTML=`${cab('R','Ru<em>tas</em>',prev?'Avance del preventivo en cada ruta contra los contenedores de GEO TRACK. Toca una para verla en el mapa.':'Lo pendiente y lo corregido del correctivo en cada ruta.')}
+  <div class="routes">${rs.map(r=>{
+    if(prev){const p=pct(r.hechos.size,r.total);return `<div class="card route rv" style="--rc:${rutaColor(r.ruta)}" onclick="filtrarRutaPC('${jsq(r.ruta)}')">
+      <div class="nm"><i class="key"></i>${esc(r.ruta)}</div><div class="pc">${r.total?cu(p):'—'}<small>${r.total?'%':''}</small></div>
+      <div class="ln">${fmt(r.hechos.size)} de ${fmt(r.total)} contenedores · ${fmt(Math.max(0,r.total-r.hechos.size))} sin preventivo</div><div class="meter"><i style="width:${p}%"></i></div>
+      <div class="tri" style="margin-top:14px"><div><b>${fmt(r.regs)}</b><span>Preventivos</span></div><div><b>${fmt(r.tc)}</b><span>Cambios pedidos</span></div><div><b>${fmt(r.ta)}</b><span>Ajustes</span></div></div></div>`;}
+    const t=r.pend+r.corr+r.nop,p=pct(r.corr,t);return `<div class="card route rv" style="--rc:${rutaColor(r.ruta)}" onclick="filtrarRutaPC('${jsq(r.ruta)}')">
+      <div class="nm"><i class="key"></i>${esc(r.ruta)}</div><div class="pc">${cu(r.pend)}<small> pend.</small></div>
+      <div class="ln">${plural(r.cont.size,'contenedor','contenedores')} con ítems · ${fmt(r.corr)} corregidos en el periodo</div><div class="meter"><i style="width:${p}%"></i></div>
+      <div class="tri" style="margin-top:14px"><div><b>${fmt(r.pend)}</b><span>Pendientes</span></div><div><b>${fmt(r.corr)}</b><span>Corregidos</span></div><div><b>${fmt(r.nop)}</b><span>No se pudo</span></div></div></div>`;}).join('')||'<div class="card empty">Sin rutas en este periodo.</div>'}</div>
+  <div class="card mt rv"><div class="lab"><h3>${prev?'Atendidos y sin preventivo por ruta':'Pendientes y corregidos por ruta'}</h3></div>
+    ${prev?leyenda([['var(--c3)','Con preventivo'],['var(--s3)','Sin preventivo']])+hbars(rs.map(r=>({label:r.ruta,a:r.hechos.size,p:Math.max(0,r.total-r.hechos.size),pre:`<i class="key" style="--rc:${rutaColor(r.ruta)};display:inline-block;margin-right:8px;vertical-align:-1px"></i>`,on:`filtrarRutaPC('${jsq(r.ruta)}')`})),[{k:'a',name:'Con preventivo',color:'var(--c3)'},{k:'p',name:'Sin preventivo',color:'var(--s3)'}])
+      :leyenda([['var(--crit)','Pendientes'],['var(--c3)','Corregidos'],['var(--warn)','No se pudo']])+hbars(rs.map(r=>({label:r.ruta,p:r.pend,c:r.corr,n:r.nop,pre:`<i class="key" style="--rc:${rutaColor(r.ruta)};display:inline-block;margin-right:8px;vertical-align:-1px"></i>`,on:`filtrarRutaPC('${jsq(r.ruta)}')`})),[{k:'p',name:'Pendientes',color:'var(--crit)'},{k:'c',name:'Corregidos',color:'var(--c3)'},{k:'n',name:'No se pudo',color:'var(--warn)'}])}
+  </div>`;
+}
+function filtrarRutaPC(r){F.ruta=r;guardarF();irPC('mapa');}
+
+/* ── Tiempos ── */
+function vPCTiempos(){
+  const prev=PC.modo==='prev',[d,h]=calcRango();
+  const dias=[];for(let x=d;x<=h;x=sumarDias(x,1))dias.push(x);
+  const hs=[];for(let i=5;i<=20;i++)hs.push(i);
+  const porDia={},porHora={};
+  if(prev)pcRegs().forEach(r=>{porDia[r.fecha]=(porDia[r.fecha]||0)+1;const m=minDeH(r.hora);if(m!=null){const k=Math.floor(m/60);porHora[k]=(porHora[k]||0)+1;}});
+  else pcHechos().filter(x=>x.k==='hecho').forEach(x=>{porDia[x.fc]=(porDia[x.fc]||0)+(x.cant||1);const m=minDeH(x.hc);if(m!=null){const k=Math.floor(m/60);porHora[k]=(porHora[k]||0)+(x.cant||1);}});
+  let extra='';
+  if(!prev){const B=[['0–3 días',0,3],['4–7 días',4,7],['8–14 días',8,14],['15 días o más',15,1e9]],pend=pcIts().filter(x=>x.k==='pend');
+    const c=B.map(([t,a,b])=>[t,pend.filter(x=>{const v=x.fp?diasDesde(x.fp):0;return v>=a&&v<=b;}).length]);
+    extra=`<div class="card mt rv"><div class="lab"><h3>Antigüedad de lo pendiente</h3><span class="sp"></span><span class="k">${plural(pend.length,'ítem')}</span></div>${pcBars(c.map(([t,n],i)=>[t,n,['#C98500','#D95926','#E5484D','#B4232A'][i]]),'var(--crit)')}</div>`;}
+  const nom=prev?'Preventivos':'Piezas instaladas';
+  main.innerHTML=`${cab('T','Tiem<em>pos</em>',prev?'Cuántos preventivos se hacen cada día y a qué hora.':'Cuántas piezas se instalan cada día, a qué hora, y cuánto espera lo pendiente.')}
+  <div class="grid g2">
+    <div class="card rv"><div class="lab"><h3>${nom} por día</h3></div>${dias.length>1?chart(colChart({h:230,labels:dias.map(x=>corta(x)),series:[{name:nom,color:'var(--c1)',values:dias.map(x=>porDia[x]||0)}],lw:dias.length>20?14:32,aria:nom+' por día'}),230):`<div class="big" style="font-size:44px;font-weight:700">${fmt(porDia[d]||0)}</div><div class="k">${esc(larga(d))}</div>`}</div>
+    <div class="card rv"><div class="lab"><h3>${nom} por hora</h3></div>${chart(colChart({h:230,labels:hs.map(v=>String(v).padStart(2,'0')),series:[{name:nom,color:'var(--c3)',values:hs.map(v=>porHora[v]||0)}],lw:26,aria:nom+' por hora'}),230)}</div>
+  </div>${extra}`;
+}
+
+/* ── Repuestos ── */
+function vPCPiezas(){
+  const prev=PC.modo==='prev';
+  if(prev){
+    const N={},O={},H={};const conts=new Set();
+    pcRegs().forEach(r=>r.it.forEach(([n,s])=>{
+      const m=String(s).match(/cambio(?:\s*×\s*(\d+))?/i);
+      if(m){const q=+(m[1]||1),k=num28(n);const T=k?N:O,key=k||n;(T[key]=T[key]||{n:key,c:new Set(),q:0});T[key].c.add(r.tacho);T[key].q+=q;conts.add(r.tacho);}
+      if(/ajuste|se hizo|retirad|colocad/i.test(s)){const t=/colocad/i.test(s)?'Colocado':/retirad/i.test(s)?'Retirado':/se hizo/i.test(s)?'Se hizo':'Ajuste',key=n+'|'+t;(H[key]=H[key]||{n,t,c:0});H[key].c++;}
+    }));
+    const nums=Object.keys(N).map(Number).sort((a,b)=>a-b);let tot=0,uds=0;
+    const filas=nums.map(k=>{const x=N[k],v=x.q*REP28[k][1];tot+=v;uds+=x.q;return `<tr style="cursor:default"><td class="r">${k}</td><td><b style="font-weight:600">${esc(REP28[k][0])}</b></td><td class="r">${fmt(x.c.size)}</td><td class="r"><b>${fmt(x.q)}</b></td><td class="r">${dinero(REP28[k][1])}</td><td class="r">${dinero(v)}</td></tr>`;}).join('');
+    const otros=Object.values(O).sort((a,b)=>b.q-a.q),hechos=Object.values(H).sort((a,b)=>b.c-a.c);
+    main.innerHTML=`${cab('P','Requeri<em>mientos</em>','Repuestos que el preventivo pide cambiar. Quedan pendientes de aprobación del Administrador del Contrato antes de pasar al correctivo.')}
+    <div class="grid g4">${stat('Contenedores',cu(conts.size),'con algún cambio pedido')}${stat('Unidades',cu(uds),'de repuestos del contrato')}${stat('Valor estimado',dinero(tot),'precios del contrato, sin IVA')}${stat('Fuera del contrato',cu(otros.reduce((s,x)=>s+x.q,0)),'unidades sin número (solo trazabilidad)')}</div>
+    <div class="card rv mt"><div class="lab"><h3>Requieren cambio · repuestos del contrato</h3></div>${nums.length?`<div class="scroll-x"><table class="tbl"><thead><tr><th class="r">Nº</th><th>Repuesto</th><th class="r">Contenedores</th><th class="r">Unidades</th><th class="r">P. unitario</th><th class="r">Valor</th></tr></thead><tbody>${filas}</tbody><tfoot><tr><td></td><td><b>Total</b></td><td></td><td class="r"><b>${fmt(uds)}</b></td><td></td><td class="r"><b>${dinero(tot)}</b></td></tr></tfoot></table></div>`:'<div class="empty">Ningún cambio pedido en el periodo.</div>'}</div>
+    <div class="split mt"><div class="card rv"><div class="lab"><h3>Fuera del contrato</h3><span class="sp"></span><span class="k">No van en el informe PDF</span></div>${otros.length?`<table class="tbl"><thead><tr><th>Ítem</th><th class="r">Contenedores</th><th class="r">Unidades</th></tr></thead><tbody>${otros.map(x=>`<tr style="cursor:default"><td>${esc(x.n)}</td><td class="r">${fmt(x.c.size)}</td><td class="r">${fmt(x.q)}</td></tr>`).join('')}</tbody></table>`:'<div class="empty">Nada.</div>'}</div>
+      <div class="card rv"><div class="lab"><h3>Hecho en sitio</h3><span class="sp"></span><span class="k">Ajustes, colocados, retirados y lavado</span></div>${hechos.length?`<table class="tbl"><thead><tr><th>Ítem</th><th>Trabajo</th><th class="r">Contenedores</th></tr></thead><tbody>${hechos.slice(0,40).map(x=>`<tr style="cursor:default"><td>${esc(x.n)}</td><td>${esc(x.t)}</td><td class="r">${fmt(x.c)}</td></tr>`).join('')}</tbody></table>`:'<div class="empty">Nada.</div>'}</div></div>`;
+    return;
+  }
+  const P={},C={},O={};let tot=0,uds=0;
+  pcIts().forEach(x=>{const k=num28(x.item);if(!k){if(x.k==='pend'){(O[x.item]=O[x.item]||{n:x.item,q:0,c:new Set()});O[x.item].q+=x.cant||1;O[x.item].c.add(x.tacho);}return;}
+    if(x.k==='pend'){(P[k]=P[k]||{q:0,c:new Set()});P[k].q+=x.cant||1;P[k].c.add(x.tacho);}});
+  pcHechos().filter(x=>x.k==='hecho').forEach(x=>{const k=num28(x.item);if(!k)return;(C[k]=C[k]||{q:0,c:new Set()});C[k].q+=x.cant||1;C[k].c.add(x.tacho);});
+  const nums=[...new Set(Object.keys(P).concat(Object.keys(C)).map(Number))].sort((a,b)=>a-b);
+  let tp=0;const filas=nums.map(k=>{const p=P[k]||{q:0,c:new Set()},c=C[k]||{q:0,c:new Set()},v=c.q*REP28[k][1];tot+=v;uds+=c.q;tp+=p.q;
+    return `<tr style="cursor:default"><td class="r">${k}</td><td><b style="font-weight:600">${esc(REP28[k][0])}</b></td><td class="r">${fmt(p.q)}</td><td class="r"><b>${fmt(c.q)}</b></td><td class="r">${dinero(REP28[k][1])}</td><td class="r">${dinero(v)}</td></tr>`;}).join('');
+  const otros=Object.values(O).sort((a,b)=>b.q-a.q);
+  main.innerHTML=`${cab('P','Repues<em>tos</em>','Lo que falta instalar y lo instalado en el periodo, con el precio unitario del contrato.')}
+  <div class="grid g4">${stat('Por instalar',cu(tp),'unidades pendientes')}${stat('Instalados',cu(uds),'en el periodo')}${stat('Valor instalado',dinero(tot),'precios del contrato, sin IVA')}${stat('Fuera del contrato',cu(otros.reduce((s,x)=>s+x.q,0)),'pendientes sin número')}</div>
+  <div class="card rv mt"><div class="lab"><h3>Repuestos del contrato</h3></div>${nums.length?`<div class="scroll-x"><table class="tbl"><thead><tr><th class="r">Nº</th><th>Repuesto</th><th class="r">Por instalar</th><th class="r">Instalados</th><th class="r">P. unitario</th><th class="r">Valor instalado</th></tr></thead><tbody>${filas}</tbody><tfoot><tr><td></td><td><b>Total</b></td><td class="r"><b>${fmt(tp)}</b></td><td class="r"><b>${fmt(uds)}</b></td><td></td><td class="r"><b>${dinero(tot)}</b></td></tr></tfoot></table></div>`:'<div class="empty">Sin repuestos en el periodo.</div>'}</div>
+  <div class="card rv mt"><div class="lab"><h3>Fuera del contrato</h3><span class="sp"></span><span class="k">Solo trazabilidad · no van en el informe PDF</span></div>${otros.length?`<table class="tbl"><thead><tr><th>Ítem</th><th class="r">Contenedores</th><th class="r">Unidades pendientes</th></tr></thead><tbody>${otros.map(x=>`<tr style="cursor:default"><td>${esc(x.n)}</td><td class="r">${fmt(x.c.size)}</td><td class="r">${fmt(x.q)}</td></tr>`).join('')}</tbody></table>`:'<div class="empty">Nada.</div>'}</div>`;
+}
+
+/* Grafitis que el preventivo debe retirar (vienen de visitas anteriores) */
+function cardGrafitis(){
+  const pp=(PC&&PC.pp)||[];if(!pp.length)return '';
+  const l=pp.filter(x=>!F.ruta||x[1]===F.ruta);if(!l.length)return '';
+  return `<div class="card rv mt"><div class="lab"><h3>Grafitis pendientes de retirar</h3><span class="sp"></span><span class="k">${plural(l.length,'contenedor','contenedores')} · se cierran solos cuando el preventivo marca «Retirado»</span></div>
+    <div class="scroll-x"><table class="tbl"><thead><tr><th>Contenedor</th><th>Ruta</th><th>Desde</th></tr></thead><tbody>${l.sort((a,b)=>String(a[2]).localeCompare(String(b[2]))).slice(0,200).map(x=>`<tr style="cursor:default"><td><b>${esc(x[0])}</b></td><td>${rutaTag(x[1])}</td><td>${x[2]?esc(larga(x[2])):'—'}</td></tr>`).join('')}</tbody></table></div></div>`;
 }
 
 /* ---------- copia local: el tablero abre al instante ----------
@@ -1987,13 +2181,29 @@ function vPiezas(){
 let NEC_CSV=()=>{};
 
 /* ── 07 REGISTROS ────────────────────────────────────────────────── */
+/* Informe de levantamiento en PDF (uno por día con registros), en Drive */
+async function levADrive(){
+  const b=$('#levPdf');if(!b||b.disabled)return;
+  const dias=[...new Set((X&&X.regs||[]).map(r=>r.fecha))].sort().slice(-31);
+  if(!dias.length){toast('No hay registros en el periodo');return;}
+  b.disabled=true;let carp='';
+  try{
+    for(let i=0;i<dias.length;i++){b.textContent=`Enviando ${i+1} de ${dias.length}…`;
+      const r=await api({action:'sv_acta_pdf',modo:'lev',ciudad:F.ciudad,fecha:dias[i]},120000);
+      if(!r||!r.ok)throw new Error((r&&r.error)||'error');carp=r.carpeta||carp;}
+    b.textContent='Enviado a Drive ✓';
+    toast(`${dias.length===1?'El informe':'Los '+dias.length+' informes'} de levantamiento se están armando: aparecen en Drive en unos minutos`);
+    if(carp)setTimeout(()=>{b.outerHTML=`<a class="btn acta-b" href="${esc(carp)}" target="_blank" rel="noopener">Abrir carpeta en Drive</a>`;},1500);
+  }catch(e){b.disabled=false;b.textContent='Informe PDF a Drive';toast('No se pudo enviar a Drive: '+esc(String(e.message||e)));}
+}
+document.addEventListener('click',e=>{if(e.target.closest('#levPdf'))levADrive();});
 function vRegistros(){
   main.innerHTML=`
   ${cab('07','Regis<em>tros</em>','Todo lo registrado en el periodo. Abre cualquiera para ver piezas, foto y ubicación, y aprobarlo u observarlo.')}
   <div class="tools rv">
     <label class="search"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--mute)" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="q" placeholder="Contenedor, colaborador, ruta u observación" value="${esc(BUSCA)}"></label>
     <div class="seg" id="rf">${[['todos','Todos'],['cambios','Con cambios'],['alertas','Con alertas'],['sin','Por revisar'],['obs','Observados'],['apr','Aprobados']].map(([k,t])=>`<button class="${REGF===k?'on':''}" data-f="${k}">${t}</button>`).join('')}</div>
-    <button class="btn" id="csv">Descargar CSV</button><button class="btn" onclick="print()">Imprimir</button>
+    <button class="btn" id="csv">Descargar CSV</button><button class="btn" onclick="print()">Imprimir</button><button class="btn acta-b" id="levPdf">Informe PDF a Drive</button>
   </div>
   <div class="card rv" style="padding-top:6px;padding-bottom:6px"><div class="rows" id="rb"></div><div id="rmas"></div></div>`;
   let lim=120;
