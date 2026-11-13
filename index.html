@@ -94,6 +94,22 @@ nav.tabs::-webkit-scrollbar{display:none}
 .seg button{height:30px;padding:0 12px;border-radius:9px;font-size:12.5px;font-weight:600;color:var(--ink2);white-space:nowrap;transition:background .2s,color .2s}
 .seg button.on{background:var(--ink);color:var(--bg)}
 .pill{height:38px;padding:0 30px 0 13px;border-radius:12px;background:var(--s1) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%238a9bab' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat right 12px center;border:1px solid var(--line);font-size:12.5px;font-weight:600;-webkit-appearance:none;appearance:none;flex:none;max-width:200px}
+.bbus{height:38px;padding:0 14px;border-radius:12px;background:var(--ink);color:var(--bg);font-size:12.5px;font-weight:700;display:inline-flex;align-items:center;gap:7px;flex:none;white-space:nowrap}
+.bus-f{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:10px;margin-top:16px}
+.bus-f label{display:flex;flex-direction:column;gap:5px;font:700 9.5px/1.2 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--mute);min-width:0}
+.bus-f input,.bus-f select{height:40px;border-radius:11px;background:var(--s2);border:1px solid var(--line);padding:0 11px;font:600 14px var(--sans,inherit);color:var(--ink);min-width:0;width:100%;text-transform:none;letter-spacing:0}
+.bus-sum{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:16px}
+.bus-sum div{padding:12px 14px;border-radius:14px;background:var(--s2);border:1px solid var(--line)}
+.bus-sum b{display:block;font-size:15px;margin-top:4px}
+.bus-sum small{color:var(--ink2);font-size:12px}
+.bus-sum .si{border-color:color-mix(in srgb,var(--teal) 55%,transparent)}
+.bus-sum .no{border-color:color-mix(in srgb,var(--crit) 45%,transparent)}
+.bus-l{margin-top:14px}
+.bus-r{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:11px 8px;border-top:1px solid var(--line);cursor:pointer;border-radius:10px}
+.bus-r:hover{background:var(--s2)}
+.bus-r .t{font:700 10px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;padding:5px 7px;border-radius:7px;background:var(--s3);color:var(--ink2)}
+.bus-r b{font-size:14px}.bus-r small{display:block;color:var(--ink2);font-size:12px;margin-top:2px}
+@media(max-width:620px){.bus-f{grid-template-columns:1fr 1fr}.bus-f label:nth-child(-n+2){grid-column:1/-1}}
 .pill option{background:var(--s1);color:var(--ink)}
 .dates{display:none;gap:6px;align-items:center;flex:none}
 .dates.show{display:flex}
@@ -651,6 +667,7 @@ header{padding-top:env(safe-area-inset-top,0px)}
     <div class="dates" id="fDates"><input type="date" id="fDesde" aria-label="Desde"><span style="color:var(--mute)">→</span><input type="date" id="fHasta" aria-label="Hasta"></div>
     <select class="pill" id="fPersona" title="Colaborador" aria-label="Colaborador"><option value="">Todo el personal</option></select>
     <select class="pill" id="fRuta" title="Ruta" aria-label="Ruta"><option value="">Todas las rutas</option></select>
+    <button class="bbus" id="bBuscar" title="Buscar un reporte por contenedor, ficha o fecha"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>Buscar reporte</button>
   </div>
 </header>
 
@@ -976,10 +993,12 @@ async function cargarPC(conGeo){
   finally{CARGANDO=false;}
 }
 
-const pcPrev=()=>(PC.regs||[]).map(a=>({id:a[0],fecha:a[1],hora:a[2],r1:a[3],r2:a[4],tacho:a[5],ruta:a[6],lat:a[7],lng:a[8],acc:a[9],sin:a[10],tc:a[11],ta:a[12],obs:a[13],it:a[14]||[],foto:a[15],av:a[16],fotos:Array.isArray(a[17])?a[17]:(a[15]?[a[15]]:[]),
-  personas:[a[3],a[4]].map(x=>String(x||'').trim()).filter(Boolean)}));
-const pcCorr=()=>(PC.items||[]).map(a=>({id:a[0],prev:a[1],fp:a[2],tacho:a[3],ruta:a[4],grupo:a[5],item:a[6],acc:a[7],cant:a[8],rp:a[9],est:a[10],fc:a[11],hc:a[12],rc:a[13],obs:a[14],lat:a[15],lng:a[16],foto:a[17],nf:a[18],fotos:Array.isArray(a[19])?a[19]:(a[17]?[a[17]]:[]),
-  k:/^corregido$/i.test(a[10])?'hecho':/no se pudo/i.test(a[10])?'nopudo':'pend'}));
+const mapPrev=a=>({id:a[0],fecha:a[1],hora:a[2],r1:a[3],r2:a[4],tacho:a[5],ruta:a[6],lat:a[7],lng:a[8],acc:a[9],sin:a[10],tc:a[11],ta:a[12],obs:a[13],it:a[14]||[],foto:a[15],av:a[16],fotos:Array.isArray(a[17])?a[17]:(a[15]?[a[15]]:[]),
+  personas:[a[3],a[4]].map(x=>String(x||'').trim()).filter(Boolean)});
+const pcPrev=()=>(PC.regs||[]).map(mapPrev);
+const mapCorr=a=>({id:a[0],prev:a[1],fp:a[2],tacho:a[3],ruta:a[4],grupo:a[5],item:a[6],acc:a[7],cant:a[8],rp:a[9],est:a[10],fc:a[11],hc:a[12],rc:a[13],obs:a[14],lat:a[15],lng:a[16],foto:a[17],nf:a[18],fotos:Array.isArray(a[19])?a[19]:(a[17]?[a[17]]:[]),
+  k:/^corregido$/i.test(a[10])?'hecho':/no se pudo/i.test(a[10])?'nopudo':'pend'});
+const pcCorr=()=>(PC.items||[]).map(mapCorr);
 function pintarRutasPC(lista){
   const ru=new Set(lista.map(x=>x.ruta).filter(Boolean));GEO.forEach(g=>{if(g.ruta)ru.add(g.ruta);});if(F.ruta)ru.add(F.ruta);
   $('#fRuta').innerHTML='<option value="">Todas las rutas</option>'+[...ru].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true})).map(p=>`<option ${p===F.ruta?'selected':''}>${esc(p)}</option>`).join('');
@@ -1280,8 +1299,8 @@ function avTag(av){
   return `<span class="tag ${n?'x':'w'}"><i></i>${h}/${t}${n?' · '+n+' no se pudo':''}</span>`;
 }
 function popPrev(r){return `<h4>${esc(r.tacho)}</h4><div style="margin-bottom:8px;display:flex;gap:6px;flex-wrap:wrap">${rutaTag(r.ruta)}${tagsPrev(r)}</div><div style="color:var(--ink2)">${esc(larga(r.fecha))} · ${esc(r.hora)} · ${esc(r.personas.join(' y '))}</div><div class="acts" style="margin-top:10px"><button class="btn" onclick="detallePrev('${jsq(r.id)}')">Ver detalle</button></div>`;}
-function detallePrev(id){
-  const r=pcPrev().find(x=>x.id===id);if(!r)return;
+function detallePrev(id,obj){
+  const r=obj||pcPrev().find(x=>x.id===id);if(!r)return;
   const g=GEO.get(r.tacho),maps=r.lat!=null?`https://www.google.com/maps?q=${r.lat},${r.lng}`:g&&g.lat!=null?`https://www.google.com/maps?q=${g.lat},${g.lng}`:'';
   $('#sheet').innerHTML=`
     <div class="sh"><div class="sp"><div class="eyebrow" style="margin-bottom:8px"><span class="idx">Preventivo</span><span class="rule"></span>${esc(larga(r.fecha))} · ${esc(r.hora)}</div><h2>${esc(r.tacho)}</h2><div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">${rutaTag(r.ruta)}${tagsPrev(r)}${avTag(r.av)}</div></div><button class="ib" onclick="cerrarModal()" aria-label="Cerrar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
@@ -1371,8 +1390,8 @@ function popCorr(t,l){
     (l.length>8?`<div style="color:var(--mute)">y ${l.length-8} más</div>`:'')+
     `<div class="acts" style="margin-top:10px"><button class="btn" onclick="PCQ='${jsq(t)}';PCF='todos';renderPC(false)">Ver en la lista</button></div>`;
 }
-function detalleCorr(id){
-  const x=pcCorr().find(y=>y.id===id);if(!x)return;
+function detalleCorr(id,obj){
+  const x=obj||pcCorr().find(y=>y.id===id);if(!x)return;
   const g=GEO.get(x.tacho),maps=x.lat!=null?`https://www.google.com/maps?q=${x.lat},${x.lng}`:g&&g.lat!=null?`https://www.google.com/maps?q=${g.lat},${g.lng}`:'';
   $('#sheet').innerHTML=`
     <div class="sh"><div class="sp"><div class="eyebrow" style="margin-bottom:8px"><span class="idx">Correctivo</span><span class="rule"></span>${esc(x.grupo||'')}</div><h2>${esc(x.tacho)}</h2><div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">${rutaTag(x.ruta)}${estTag(x)}</div></div><button class="ib" onclick="cerrarModal()" aria-label="Cerrar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
@@ -1390,6 +1409,116 @@ function detalleCorr(id){
   $('#modal').classList.add('show');$('#sheet').scrollTop=0;
 }
 
+
+/* ─────────── Buscar reporte ───────────
+   Busca en levantamiento, preventivo y correctivo de la ciudad elegida,
+   en todo el periodo pedido (por tramos de 90 días, que es lo que acepta
+   el servidor). Dice si el reporte se hizo o no y abre toda su información. */
+const BUS_INI='2026-10-01';
+const BUS_CACHE=new Map();
+let BUS={q:'',tipo:'todos',desde:'',hasta:'',res:null,cargando:false};
+const BUS_NOM={mant:'Levantamiento',prev:'Preventivo',corr:'Correctivo'};
+const BUS_ACC={mant:'sv_datos',prev:'sv_prev',corr:'sv_corr'};
+function busTramos(d,h){const t=[];let a=d;while(a<=h){let b=sumarDias(a,89);if(b>h)b=h;t.push([a,b]);a=sumarDias(b,1);}return t;}
+async function busTraer(tipo,ciudad,d,h){
+  const k=tipo+'|'+ciudad+'|'+d+'|'+h,hoy=hoyISO();
+  if(BUS_CACHE.has(k)&&h<hoy)return BUS_CACHE.get(k);
+  const r=await api({action:BUS_ACC[tipo],ciudad,desde:d,hasta:h,sig:'',geo:0},60000);
+  if(!r||!r.ok)throw new Error((r&&r.error)||'error');
+  BUS_CACHE.set(k,r);return r;
+}
+const busN=s=>String(s??'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
+function busCoincide(q,x){
+  if(!q)return true;
+  const t=busN(x.tacho),id=busN(x.id);
+  if(/^\d+$/.test(q))return t===q||id.replace(/\D/g,'').replace(/^0+/,'')===q.replace(/^0+/,'')||t.endsWith(q)&&q.length>=4;
+  return t===q||id.indexOf(q)>=0||busN(x.ruta)===q||(q.length>=3&&(x.personas||[x.rc]).some(p=>busN(p).indexOf(q)>=0));
+}
+function abrirBuscar(){
+  if(!S){toast('Espera a que cargue el tablero');return;}
+  const m=modosOK(),tipos=['mant','prev','corr'].filter(k=>m[k]);
+  if(!BUS.desde)BUS.desde=BUS_INI;
+  if(!BUS.hasta||BUS.hasta<hoyISO())BUS.hasta=hoyISO();
+  if(BUS.tipo!=='todos'&&tipos.indexOf(BUS.tipo)<0)BUS.tipo='todos';
+  $('#sheet').innerHTML=`
+    <div class="sh"><div class="sp"><div class="eyebrow" style="margin-bottom:8px"><span class="idx">Buscar</span><span class="rule"></span>${esc(F.ciudad)}</div><h2 style="font-size:clamp(24px,4vw,32px);letter-spacing:-.025em;line-height:1.1">¿Se hizo el reporte?</h2><div style="margin-top:6px;color:var(--ink2);font-size:13.5px">Escribe el número de contenedor o de ficha. Si lo dejas vacío, verás todo lo que se hizo en las fechas elegidas.</div></div><button class="ib" onclick="cerrarModal()" aria-label="Cerrar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+    <form class="bus-f" id="busF" autocomplete="off">
+      <label>Contenedor, ficha o ruta<input id="busQ" inputmode="search" placeholder="Ej.: 44136" value="${esc(BUS.q)}"></label>
+      <label>Tipo<select id="busT"><option value="todos">Todos</option>${tipos.map(k=>`<option value="${k}" ${BUS.tipo===k?'selected':''}>${BUS_NOM[k]}</option>`).join('')}</select></label>
+      <label>Desde<input type="date" id="busD" value="${BUS.desde}" max="${hoyISO()}"></label>
+      <label>Hasta<input type="date" id="busH" value="${BUS.hasta}" max="${hoyISO()}"></label>
+    </form>
+    <div class="acts" style="margin-top:12px"><button class="btn pri" id="busGo">Buscar</button><button class="btn" id="busHoy">Solo hoy</button><button class="btn" id="busTodo">Todo el contrato</button></div>
+    <div id="busOut">${BUS.res?busPintar():''}</div>`;
+  $('#modal').classList.add('show');$('#sheet').scrollTop=0;
+  const ir=()=>{BUS.q=$('#busQ').value.trim();BUS.tipo=$('#busT').value;BUS.desde=$('#busD').value||BUS_INI;BUS.hasta=$('#busH').value||hoyISO();if(BUS.hasta<BUS.desde){const x=BUS.desde;BUS.desde=BUS.hasta;BUS.hasta=x;$('#busD').value=BUS.desde;$('#busH').value=BUS.hasta;}buscarReporte();};
+  $('#busF').onsubmit=e=>{e.preventDefault();ir();};
+  $('#busGo').onclick=ir;
+  $('#busHoy').onclick=()=>{$('#busD').value=$('#busH').value=hoyISO();ir();};
+  $('#busTodo').onclick=()=>{$('#busD').value=BUS_INI;$('#busH').value=hoyISO();ir();};
+  if(!BUS.res)setTimeout(()=>{const i=$('#busQ');if(i&&innerWidth>760)i.focus();},60);
+}
+async function buscarReporte(){
+  if(BUS.cargando)return;BUS.cargando=true;
+  const out=$('#busOut'),ciudad=F.ciudad,q=busN(BUS.q);
+  const m=modosOK(),tipos=(BUS.tipo==='todos'?['mant','prev','corr']:[BUS.tipo]).filter(k=>m[k]);
+  out.innerHTML='<div class="empty"><div class="spin" style="margin:0 auto 10px"></div>Buscando en '+tipos.map(k=>BUS_NOM[k].toLowerCase()).join(', ')+'…</div>';
+  const res={q:BUS.q,ciudad,desde:BUS.desde,hasta:BUS.hasta,tipos,mant:[],prev:[],corr:[],err:[]};
+  const tramos=busTramos(BUS.desde,BUS.hasta);
+  await Promise.all(tipos.map(async tipo=>{
+    try{
+      for(const [d,h] of tramos){
+        const r=await busTraer(tipo,ciudad,d,h);
+        if(tipo==='mant'){const P=r.piezas||[];(r.regs||[]).map(normalizar).forEach(x=>{x._p=P;res.mant.push(x);});}
+        else if(tipo==='prev')(r.regs||[]).map(mapPrev).forEach(x=>res.prev.push(x));
+        else (r.items||[]).map(mapCorr).forEach(x=>{x.fecha=x.fc||x.fp;x.personas=[x.rc].filter(Boolean);res.corr.push(x);});
+      }
+    }catch(e){res.err.push(tipo);}
+  }));
+  const vistos=new Set();
+  ['mant','prev','corr'].forEach(k=>{res[k]=res[k].filter(x=>{const u=k+'|'+x.id;if(vistos.has(u))return false;vistos.add(u);return busCoincide(q,x);}).sort((a,b)=>String(b.fecha||'').localeCompare(String(a.fecha||''))||String(b.hora||'').localeCompare(String(a.hora||'')));});
+  res.mant.forEach(x=>{x._veces=res.mant.filter(y=>y.tacho===x.tacho).length;});
+  BUS.res=res;BUS.cargando=false;
+  if($('#busOut'))$('#busOut').innerHTML=busPintar();
+}
+function busPintar(){
+  const r=BUS.res;if(!r)return '';
+  const per=r.desde===r.hasta?larga(r.desde):corta(r.desde)+' → '+corta(r.hasta);
+  const caja=k=>{
+    const l=r[k];
+    if(r.err.indexOf(k)>=0)return `<div class="no"><small>${BUS_NOM[k]}</small><b>No se pudo consultar</b><small>Revisa la conexión e inténtalo otra vez</small></div>`;
+    if(k==='corr'){
+      if(!l.length)return `<div class="${r.q?'no':''}"><small>Correctivo</small><b>${r.q?'Sin pedidos':'Nada en el periodo'}</b><small>${per}</small></div>`;
+      const h=l.filter(x=>x.k==='hecho').length,n=l.filter(x=>x.k==='nopudo').length,p=l.length-h-n;
+      return `<div class="${p?'':'si'}"><small>Correctivo</small><b>${h} de ${l.length} corregidos</b><small>${p?p+' pendiente'+(p>1?'s':''):'Todo atendido'}${n?' · '+n+' no se pudo':''}</small></div>`;
+    }
+    if(!l.length)return `<div class="${r.q?'no':''}"><small>${BUS_NOM[k]}</small><b>${r.q?'No se ha hecho':'Nada en el periodo'}</b><small>${per}</small></div>`;
+    return `<div class="si"><small>${BUS_NOM[k]}</small><b>✓ Sí · ${plural(l.length,'ficha','fichas')}</b><small>Última: ${esc(larga(l[0].fecha))}${l[0].hora?' · '+esc(l[0].hora):''}</small></div>`;
+  };
+  const g=r.q&&typeof GEO!=='undefined'&&GEO.get?GEO.get(r.q)||GEO.get(Number(r.q)):null;
+  const filas=[];
+  r.tipos.forEach(k=>r[k].forEach((x,i)=>filas.push([k,i,x])));
+  filas.sort((a,b)=>String(b[2].fecha||'').localeCompare(String(a[2].fecha||''))||String(b[2].hora||'').localeCompare(String(a[2].hora||'')));
+  const max=300;
+  const fila=([k,i,x])=>{
+    let det='';
+    if(k==='mant')det=`${esc(x.personas.join(' y ')||'—')} · ${fmt(x.tc)} cambios · ${fmt(x.ta)} ajustes`;
+    else if(k==='prev')det=`${esc(x.personas.join(' y ')||'—')} · ${x.sin?esc(x.sin):(x.tc?plural(x.tc,'cambio'):'')+(x.ta?(x.tc?' · ':'')+plural(x.ta,'ajuste'):'')||'Todo OK'}`;
+    else det=`${esc(x.item)}${x.acc?' · '+esc(x.acc):''} · preventivo ${x.fp?esc(corta(x.fp)):'—'}`;
+    const tag=k==='corr'?estTag(x):k==='prev'?avTag(x.av):revTag(x);
+    return `<div class="bus-r" onclick="busVer('${k}',${i})"><span class="t">${k==='mant'?'Levant.':BUS_NOM[k]}</span><div><b>${esc(x.tacho)}</b> <span style="color:var(--mute);font-size:12px">${x.fecha?esc(larga(x.fecha)):''}${x.hora?' · '+esc(x.hora):''}${x.ruta?' · Ruta '+esc(x.ruta):''}</span><small>${det}</small></div><span>${tag}</span></div>`;
+  };
+  return `<div class="bus-sum">${r.tipos.map(caja).join('')}</div>
+    ${g?`<div style="margin-top:10px;font-size:12.5px;color:var(--ink2)">El contenedor ${esc(r.q)} está en la ${g.ruta?'ruta '+esc(g.ruta):'base de contenedores'} de ${esc(r.ciudad)}.</div>`:''}
+    ${filas.length?`<div class="bus-l"><div class="eyebrow">${plural(filas.length,'resultado','resultados')} · ${esc(per)}</div>${filas.slice(0,max).map(fila).join('')}${filas.length>max?`<div class="empty">Se muestran los ${max} más recientes. Escribe un contenedor o acorta las fechas para ver el resto.</div>`:''}</div>`
+      :`<div class="empty" style="margin-top:8px">${r.q?`No hay ningún reporte de «${esc(r.q)}» en ${esc(r.ciudad)} entre ${esc(corta(r.desde))} y ${esc(corta(r.hasta))}.`:'No hay reportes en esas fechas.'}</div>`}`;
+}
+function busVer(k,i){
+  const x=BUS.res&&BUS.res[k]&&BUS.res[k][i];if(!x)return;
+  if(k==='mant')detalle(x.id,x);else if(k==='prev')detallePrev(x.id,x);else detalleCorr(x.id,x);
+  $('#sheet').insertAdjacentHTML('afterbegin','<button class="btn" style="margin-bottom:14px" onclick="abrirBuscar()">← Volver a la búsqueda</button>');
+}
+$('#bBuscar').onclick=abrirBuscar;
 
 /* ─────────── Pestañas de preventivo y correctivo ───────────
    Las mismas formas de mirar que en Levantamiento: resumen, mapa con
@@ -2478,13 +2607,13 @@ function verEnMapa(id){
 /* =====================================================================
    DETALLE + REVISIÓN
    ===================================================================== */
-function detalle(id){
-  const r=REGS.find(x=>x.id===id);if(!r)return;
-  const P=D.piezas||[],al=X.alertaPorReg.get(r.id)||[];
+function detalle(id,obj){
+  const r=obj||REGS.find(x=>x.id===id);if(!r)return;
+  const P=(obj&&obj._p)||(D&&D.piezas)||[],al=(!obj&&X&&X.alertaPorReg&&X.alertaPorReg.get(r.id))||[];
   const gr={};r.it.forEach(([k,t,n])=>{const nm=P[k]||('Pieza '+k),g=grupoDe(nm);(gr[g]=gr[g]||[]).push([nm,t,n]);});
   const g=GEO.get(r.tacho);
   const maps=r.lat!=null?`https://www.google.com/maps?q=${r.lat},${r.lng}`:g&&g.lat!=null?`https://www.google.com/maps?q=${g.lat},${g.lng}`:'';
-  const veces=X.tachos.get(r.tacho)?X.tachos.get(r.tacho).regs.length:1;
+  const veces=obj?(obj._veces||1):(X&&X.tachos&&X.tachos.get(r.tacho)?X.tachos.get(r.tacho).regs.length:1);
   $('#sheet').innerHTML=`
     <div class="sh"><div class="sp"><div class="eyebrow" style="margin-bottom:8px"><span class="idx">Contenedor</span><span class="rule"></span>${esc(larga(r.fecha))} · ${esc(r.hora)}</div><h2>${esc(r.tacho)}</h2><div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">${rutaTag(r.ruta)}${tagsReg(r)}${revTag(r)}</div></div><button class="ib" onclick="cerrarModal()" aria-label="Cerrar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
     <div class="kv">
@@ -2499,12 +2628,13 @@ function detalle(id){
     <div class="pz">${Object.keys(gr).length?Object.keys(gr).map(k=>`<div class="g">${esc(k)}</div>`+gr[k].map(([n,t,q])=>`<div class="p"><span>${esc(n)}</span>${t==='c'?`<span class="tag c"><i></i>Cambio × ${fmt(q)}</span>`:'<span class="tag a"><i></i>Ajuste</span>'}</div>`).join('')).join('')+`<div style="font-size:12.5px;color:var(--mute);margin-top:10px">Las demás ${Math.max(0,P.length-r.it.length)} piezas: OK.</div>`:`<div class="g">Piezas</div><div class="p"><span>Las ${P.length} piezas revisadas</span><span class="tag ok"><i></i>Todo OK</span></div>`}</div>
     ${r.obs?`<div class="rev" style="background:var(--s2)"><div class="eyebrow" style="margin-bottom:6px">Observaciones del técnico</div><div style="font-size:14px;line-height:1.55">${esc(r.obs)}</div></div>`:''}
     ${r.foto?`<div class="foto"><a href="https://drive.google.com/file/d/${esc(r.foto)}/view" target="_blank" rel="noopener"><img src="https://drive.google.com/thumbnail?id=${esc(r.foto)}&sz=w900" alt="Foto del contenedor ${esc(r.tacho)}" loading="lazy" onerror="this.outerHTML='<div class=\\'empty\\'>📷 Abrir foto en Drive</div>'"></a></div>`:''}
-    <div class="acts" style="margin-top:14px"><button class="btn" onclick="verEnMapa('${jsq(r.id)}')">Ver en el mapa</button>${maps?`<a class="btn" href="${maps}" target="_blank" rel="noopener">Abrir en Google Maps</a>`:''}</div>
-    <div class="rev"><div class="eyebrow" style="margin-bottom:8px">Revisión del supervisor</div>
+    <div class="acts" style="margin-top:14px">${obj?'':`<button class="btn" onclick="verEnMapa('${jsq(r.id)}')">Ver en el mapa</button>`}${maps?`<a class="btn" href="${maps}" target="_blank" rel="noopener">Abrir en Google Maps</a>`:''}</div>
+    ${obj?`<div class="rev"><div class="eyebrow" style="margin-bottom:8px">Revisión del supervisor</div><div style="font-size:13.5px">${r.rev?(r.rev[0]==='APROBADO'?'✓ Aprobado':'✎ Observado')+' por <b>'+esc(r.rev[2])+'</b>'+(r.rev[1]?' · «'+esc(r.rev[1])+'»':''):'<span style="color:var(--ink2)">Aún sin revisar.</span>'}</div></div>`:`<div class="rev"><div class="eyebrow" style="margin-bottom:8px">Revisión del supervisor</div>
       ${r.rev?`<div style="font-size:13.5px">${r.rev[0]==='APROBADO'?'✓ Aprobado':'✎ Observado'} por <b>${esc(r.rev[2])}</b>${r.rev[3]?' · '+hace(r.rev[3]):''}${r.rev[1]?`<div style="margin-top:4px;color:var(--ink2)">«${esc(r.rev[1])}»</div>`:''}</div>`:'<div style="font-size:13.5px;color:var(--ink2)">Aún sin revisar.</div>'}
       <textarea id="nota" placeholder="Nota (obligatoria para observar). Ej.: la foto no muestra la tapa cambiada.">${r.rev&&r.rev[0]==='OBSERVADO'?esc(r.rev[1]):''}</textarea>
-      <div class="acts"><button class="btn good" id="bApr">✓ Aprobar</button><button class="btn warn" id="bObs">✎ Observar</button>${r.rev?'<button class="btn" id="bQuitar">Quitar revisión</button>':''}</div></div>`;
+      <div class="acts"><button class="btn good" id="bApr">✓ Aprobar</button><button class="btn warn" id="bObs">✎ Observar</button>${r.rev?'<button class="btn" id="bQuitar">Quitar revisión</button>':''}</div></div>`}`;
   $('#modal').classList.add('show');$('#sheet').scrollTop=0;
+  if(obj)return;
   $('#bApr').onclick=()=>revisar(r,'APROBADO');
   $('#bObs').onclick=()=>revisar(r,'OBSERVADO');
   const q=$('#bQuitar');if(q)q.onclick=()=>revisar(r,'PENDIENTE');
